@@ -9,7 +9,7 @@ import Sidebar from "../layout/Sidebar";
 import Header from "../layout/Header";
 import { navigation } from "../../config/navigation";
 import { useAuth } from "../../../contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function LayoutTemplate({ headerConfig }) {
   const { currentUser } = useAuth();
@@ -18,6 +18,10 @@ export default function LayoutTemplate({ headerConfig }) {
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [pageHeader, setPageHeader] = useState(null);
+
+  useEffect(() => {
+    setPageHeader(null);
+  }, [location.pathname]);
 
   if (!currentUser) {
     return <Navigate to="/login" />;

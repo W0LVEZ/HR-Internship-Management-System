@@ -116,23 +116,20 @@ export default function SupervisorTasks() {
   };
 
   useEffect(() => {
-    if (selectedInternId) {
-      const internName = usersDb[selectedInternId]?.name || "Intern Name";
-
+    if (selectedIntern) {
       setPageHeader({
-        title: internName,
-        subtitle: `Task Management > ${internName} > Tasks`,
+        title: selectedIntern.name,
+        subtitle: `Task Manager > ${selectedIntern.name}`,
         showBack: true,
-        onBackClick: () => {
-          setSelectedInternId(null);
-        },
+        onclick: () => setSelectedInternId(null),
       });
-    } else {
-      setPageHeader(null);
+      return;
     }
 
+    //default page headr
+    setPageHeader(null);
     return () => setPageHeader(null);
-  }, [selectedInternId, usersDb, setPageHeader]);
+  }, [selectedIntern, setPageHeader]);
 
   return (
     <>
