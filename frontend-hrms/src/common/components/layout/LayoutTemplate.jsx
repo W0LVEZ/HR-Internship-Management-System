@@ -28,6 +28,7 @@ export default function LayoutTemplate({ headerConfig }) {
   }
 
   const roleMap = {
+    APPLICANT: "applicant",
     INTERN: "intern",
     SUPERVISOR: "supervisor",
     HR_STAFF: "hr-staff",

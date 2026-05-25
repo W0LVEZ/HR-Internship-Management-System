@@ -90,7 +90,7 @@ export default function LoginForm({ onForgotPassword }) {
           <br /> Intern (IT): <i>alex.it@company.com</i>{" "}
           <i>nathan.it@company.com</i> <i>mika.it@company.com</i>
           <br /> Intern (HR): <i>david.hr@company.com</i>{" "}
-          <i>kyla.hr@company.com</i> <i>Marco Villanueva</i>
+          <i>kyla.hr@company.com</i> <i>marco.hr@company.com</i>
           <br /> Intern (Marketing): <i>chloe.mktg@company.com</i>{" "}
           <i>bianca.mktg@company.com</i> <i>jared.mktg@company.com</i>
           <br /> Any password works!

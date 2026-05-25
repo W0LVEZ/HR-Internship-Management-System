@@ -3,15 +3,35 @@ import { LogOut, ChevronUp, ChevronDown } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-export default function SidebarProfile({ isCollapsed }) {
+export default function SidebarProfile({
+  isCollapsed,
+  passedUserName,
+  passedRole,
+}) {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
 
-  const userName = currentUser?.name || "Guest";
-  const role = currentUser?.role || "User";
+  // ================= DYNAMIC APPLICANT OVERRIDE =================
+  const initialRole = currentUser?.role || "User";
+  let userName = passedUserName || currentUser?.name || "Guest";
+  let role = passedRole || currentUser?.role || "User";
+
+  // If the user role is an APPLICANT, read directly from your working local storage database
+  if (initialRole === "APPLICANT" || initialRole === "User") {
+    const applicants = JSON.parse(
+      localStorage.getItem("applicants_db") || "[]",
+    );
+    const activeApplicant = applicants[applicants.length - 1];
+
+    if (activeApplicant && activeApplicant.firstName) {
+      userName = `${activeApplicant.firstName} ${activeApplicant.lastName || ""}`;
+      role = "APPLICANT";
+    }
+  }
+  // ==============================================================
 
   const displayAvatar =
     currentUser?.avatar ||
@@ -69,7 +89,7 @@ export default function SidebarProfile({ isCollapsed }) {
               <span className="text-sm font-semibold text-gray-900 truncate w-full">
                 {userName}
               </span>
-              <span className="text-xs font-medium text-gray-500 mt-0.5 truncate w-full">
+              <span className="text-xs font-bold text-gray-400 mt-0.5 truncate w-full tracking-wider uppercase">
                 {role}
               </span>
             </div>
