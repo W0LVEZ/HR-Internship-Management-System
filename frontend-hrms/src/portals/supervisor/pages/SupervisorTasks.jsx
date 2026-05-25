@@ -5,6 +5,8 @@ import { useAuth } from "../../../contexts/AuthContext";
 import TaskManagementPage from "../../../common/components/tasks/TaskManagementPage";
 import AssignTaskModal from "../components/ui/AssignTaskModal";
 import ProfileHeader from "../../../common/components/profile/ProfileHeader";
+import FilterButton from "../../../common/components/ui/FilterButton";
+import { addSystemLog, LOG_TYPES } from "../../../common/utils/systemLogger";
 
 export default function SupervisorTasks() {
   const { currentUser } = useAuth();
@@ -64,7 +66,6 @@ export default function SupervisorTasks() {
   // Update task anywhere in usersDb
   const updateTask = (taskId, updatedFields) => {
     const updatedUsersDb = { ...usersDb };
-
     Object.keys(updatedUsersDb).forEach((userId) => {
       const user = updatedUsersDb[userId];
 
@@ -76,6 +77,28 @@ export default function SupervisorTasks() {
           task.id === taskId ? { ...task, ...updatedFields } : task,
         ),
       };
+      if (intern) {
+        usersDb[internId] = {
+          ...intern,
+          tasks: [...(intern.tasks || []), newTask],
+        };
+
+        addSystemLog({
+          action: LOG_TYPES.TASK_ASSIGNED,
+          title: "New Task Assigned",
+          description: `${currentUser?.name || "Supervisor"} assigned "${newTask.taskName}" to ${intern.name}.`,
+          actorId: currentUser?.id,
+          actorName: currentUser?.name,
+          actorRole: currentUser?.role,
+          audience: ["hr-admin", "intern"],
+          supervisorId: currentUser?.id,
+          internId,
+          metadata: {
+            taskId: newTask.id,
+            deadline: newTask.deadline,
+          },
+        });
+      }
     });
 
     setUsersDb(updatedUsersDb);

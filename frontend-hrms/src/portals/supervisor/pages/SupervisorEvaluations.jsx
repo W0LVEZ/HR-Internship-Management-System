@@ -3,6 +3,7 @@ import { Search, Filter } from "lucide-react"; // Icons for the search and filte
 import EvaluationCard from "../components/ui/evaluations/EvaluationCard";
 import EvaluationModal from "../components/ui/evaluations/EvaluationModal";
 import { useAuth } from "../../../contexts/AuthContext";
+import { addSystemLog, LOG_TYPES } from "../../../common/utils/systemLogger";
 
 export default function SupervisorEvaluations() {
   const { currentUser } = useAuth();
@@ -39,7 +40,7 @@ export default function SupervisorEvaluations() {
       setInterns(updatedInterns);
     };
     loadInternData();
-  }, []);
+  }, [currentUser?.id]);
 
   const handleEvaluationSubmit = (newEvaluationData) => {
     if (!selectedIntern) return;
@@ -57,6 +58,20 @@ export default function SupervisorEvaluations() {
       "hrims_evaluations_db",
       JSON.stringify(updatedHistory),
     );
+    addSystemLog({
+      action: LOG_TYPES.EVALUATION_COMPLETED,
+      title: "Evaluation Completed",
+      description: `${currentUser?.name || "Supervisor"} completed an evaluation for ${selectedIntern.name}.`,
+      actorId: currentUser?.id,
+      actorName: currentUser?.name,
+      actorRole: currentUser?.role,
+      audience: ["hr-admin", "supervisor", "intern"],
+      supervisorId: currentUser?.id,
+      internId: selectedIntern.id,
+      metadata: {
+        evaluationId: newRecord.id,
+      },
+    });
 
     setInterns((prevInterns) =>
       prevInterns.map((i) => {

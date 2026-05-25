@@ -2,6 +2,7 @@ import { useState } from "react";
 import dayjs from "dayjs";
 import { AttendanceContext } from "./AttendanceContext";
 import { useAuth } from "../contexts/AuthContext";
+import { addSystemLog, LOG_TYPES } from "../common/utils/systemLogger";
 
 export const AttendanceProvider = ({ children }) => {
   const { currentUser } = useAuth();
@@ -75,6 +76,17 @@ export const AttendanceProvider = ({ children }) => {
     };
 
     updateDB(update);
+    addSystemLog({
+      action: LOG_TYPES.TIME_IN,
+      title: "Intern Timed In",
+      description: `${currentUser.name} timed in at ${newRecord.timeIn}.`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      actorRole: currentUser.role,
+      audience: ["hr-admin"],
+      supervisorId: currentUser.supervisorId,
+      internId: currentUser.id,
+    });
   };
 
   const timeOut = () => {
@@ -125,6 +137,17 @@ export const AttendanceProvider = ({ children }) => {
     };
 
     updateDB(updated);
+    addSystemLog({
+      action: LOG_TYPES.TIME_OUT,
+      title: "Intern Timed Out",
+      description: `${currentUser.name} timed out at ${now.format("hh:mm A")}.`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      actorRole: currentUser.role,
+      audience: ["hr-admin"],
+      supervisorId: currentUser.supervisorId,
+      internId: currentUser.id,
+    });
   };
 
   // To check if Absent
