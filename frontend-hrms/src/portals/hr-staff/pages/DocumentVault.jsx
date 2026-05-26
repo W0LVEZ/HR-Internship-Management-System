@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
 import { mockDocumentVaultRecords } from "../../../common/utils/mockAuth.js";
+import { addSystemLog } from "../../../common/utils/systemLogger.js";
 import DocumentsViewModal from "../../hr-admin/components/ui/DocumentsViewModal.jsx";
 
 const vaultTabs = [
@@ -12,47 +13,40 @@ const vaultTabs = [
   { label: "Endorsement", key: "endorsement-letter" },
 ];
 
-const staffDocumentVaultRecords = {
-  ...mockDocumentVaultRecords,
-  coa: [
-    {
-      id: "coa-1",
-      name: "Student 5",
-      university: "University 4",
-      branch: "Branch 1",
-      fileName: "COA-university-Branch 1",
-      expiryDate: "2026-06-14",
-      status: "Active",
-      updatedAt: "2026-05-18",
-    },
-    {
-      id: "coa-2",
-      name: "Student 6",
-      university: "University 4",
-      branch: "Branch 2",
-      fileName: "COA-university-Branch 2",
-      expiryDate: "2026-06-07",
-      status: "Pending",
-      updatedAt: "2026-05-16",
-    },
-    {
-      id: "coa-3",
-      name: "Student 7",
-      university: "University 5",
-      branch: "Main Campus",
-      fileName: "COA-university-Main Campus",
-      expiryDate: "2026-05-27",
-      status: "Expiring",
-      updatedAt: "2026-05-15",
-    },
-  ],
+const DOCUMENT_VAULT_STORAGE_KEY = "hrims_document_vault_records";
+
+const getDocumentVaultRecords = () => {
+  const storedRecords = localStorage.getItem(DOCUMENT_VAULT_STORAGE_KEY);
+
+  if (!storedRecords) {
+    localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(mockDocumentVaultRecords));
+    return mockDocumentVaultRecords;
+  }
+
+  try {
+    return JSON.parse(storedRecords);
+  } catch {
+    localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(mockDocumentVaultRecords));
+    return mockDocumentVaultRecords;
+  }
+};
+
+const updateDocumentVaultRecord = (folderId, recordId, updater) => {
+  const records = getDocumentVaultRecords();
+  const nextRecords = {
+    ...records,
+    [folderId]: (records[folderId] || []).map((record) =>
+      record.id === recordId ? updater(record) : record,
+    ),
+  };
+
+  localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(nextRecords));
+  return nextRecords;
 };
 
 const statusStyles = {
-  Verified: "bg-emerald-100 text-emerald-600",
+  Approved: "bg-emerald-100 text-emerald-600",
   Pending: "bg-amber-100 text-amber-600",
-  Expiring: "bg-amber-100 text-amber-600",
-  Expired: "bg-rose-100 text-rose-600",
   Rejected: "bg-rose-100 text-rose-600",
 };
 
@@ -70,15 +64,17 @@ const formatDateDisplay = (dateValue) => {
   }).format(date);
 };
 
-const formatStatusLabel = (status) => {
-  if (status === "Active") return "Verified";
+const normalizeStatus = (status) => {
+  if (status === "Active" || status === "Verified") return "Approved";
+  if (status === "Expiring") return "Pending";
+  if (status === "Expired") return "Rejected";
   return status;
 };
 
 export default function DocumentVault() {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("moa");
-  const [recordsByTab, setRecordsByTab] = useState(staffDocumentVaultRecords);
+  const [recordsByTab, setRecordsByTab] = useState(getDocumentVaultRecords());
   const [openPreview, setOpenPreview] = useState(false);
   const [previewDocument, setPreviewDocument] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -93,12 +89,23 @@ export default function DocumentVault() {
   const updateSelectedRow = (nextStatus, remarks) => {
     if (!selectedTab || !selectedRecord) return;
 
-    setRecordsByTab((previousRecords) => ({
-      ...previousRecords,
-      [selectedTab]: (previousRecords[selectedTab] ?? []).map((row) =>
-        row.id === selectedRecord.id ? { ...row, status: nextStatus, remarks } : row,
-      ),
-    }));
+    setRecordsByTab((previousRecords) => {
+      const normalizedStatus = normalizeStatus(nextStatus);
+      const nextRecords = {
+        ...previousRecords,
+        [selectedTab]: (previousRecords[selectedTab] ?? []).map((row) =>
+          row.id === selectedRecord.id ? { ...row, status: normalizedStatus, remarks } : row,
+        ),
+      };
+
+      updateDocumentVaultRecord(selectedTab, selectedRecord.id, (row) => ({
+        ...row,
+        status: normalizedStatus,
+        remarks,
+      }));
+
+      return nextRecords;
+    });
   };
 
   const handleViewDocument = (row) => {
@@ -108,7 +115,7 @@ export default function DocumentVault() {
       internName: row.name,
       universityBranch: `${row.university} / ${row.branch}`,
       requestedDate: formatDateDisplay(row.updatedAt),
-      requestedStatus: formatStatusLabel(row.status),
+      requestedStatus: normalizeStatus(row.status),
       fileName: row.fileName,
       fileSize: "1.5 MB",
       remarks:
@@ -129,15 +136,47 @@ export default function DocumentVault() {
   };
 
   const handleApprove = (remarks) => {
-    updateSelectedRow("Active", remarks);
+    updateSelectedRow("Approved", remarks);
+
+    addSystemLog({
+      action: "DOCUMENT_APPROVED",
+      title: "Document Approved",
+      description: `${currentUser?.name || "HR Staff"} approved ${selectedRecord?.fileName || "a document"}.`,
+      actorId: currentUser?.id || null,
+      actorName: currentUser?.name || "HR Staff",
+      actorRole: currentUser?.role || "HR_STAFF",
+      audience: ["hr-admin"],
+      metadata: {
+        documentId: selectedRecord?.id,
+        documentName: selectedRecord?.fileName,
+        status: "Approved",
+        remarks,
+      },
+    });
+  };
+
+  const handlePending = (remarks) => {
+    updateSelectedRow("Pending", remarks);
   };
 
   const handleReject = (remarks) => {
     updateSelectedRow("Rejected", remarks);
-  };
 
-  const handleCancelReview = () => {
-    updateSelectedRow("Pending", "");
+    addSystemLog({
+      action: "DOCUMENT_REJECTED",
+      title: "Document Rejected",
+      description: `${currentUser?.name || "HR Staff"} rejected ${selectedRecord?.fileName || "a document"}.`,
+      actorId: currentUser?.id || null,
+      actorName: currentUser?.name || "HR Staff",
+      actorRole: currentUser?.role || "HR_STAFF",
+      audience: ["hr-admin"],
+      metadata: {
+        documentId: selectedRecord?.id,
+        documentName: selectedRecord?.fileName,
+        status: "Rejected",
+        remarks,
+      },
+    });
   };
 
   return (
@@ -201,10 +240,10 @@ export default function DocumentVault() {
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${
-                        statusStyles[formatStatusLabel(row.status)] ?? "bg-slate-100 text-slate-500"
+                        statusStyles[normalizeStatus(row.status)] ?? "bg-slate-100 text-slate-500"
                       }`}
                     >
-                      {formatStatusLabel(row.status)}
+                      {normalizeStatus(row.status)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -240,9 +279,9 @@ export default function DocumentVault() {
         document={previewDocument}
         dateLabel="Date Uploaded"
         showReviewActions
+        onPending={handlePending}
         onApprove={handleApprove}
         onReject={handleReject}
-        onCancel={handleCancelReview}
       />
     </div>
   );

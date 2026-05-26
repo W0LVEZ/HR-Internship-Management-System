@@ -6,9 +6,9 @@ export default function DocumentsViewModal({
   document,
   dateLabel = "Expiry Date",
   showReviewActions = false,
+  onPending,
   onApprove,
   onReject,
-  onCancel,
 }) {
   const [remarks, setRemarks] = useState("");
 
@@ -31,22 +31,16 @@ export default function DocumentsViewModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={() => {
-        if (showReviewActions) {
-          onCancel?.(remarks);
-        }
-
-        onClose();
-      }}
+      onClick={onClose}
     >
       <div
-        className="bg-white w-[90%] max-w-md rounded-lg p-5 relative shadow-lg"
+        className="relative w-[90%] max-w-lg rounded-2xl bg-white p-4 shadow-lg sm:p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold mb-4">Request Details</h2>
+        <h2 className="mb-4 text-base font-semibold">Request Details</h2>
 
-        <div className="grid text-sm">
-          <div className="flex flex-col p-2 gap-5">
+        <div className="grid gap-4 text-sm md:grid-cols-2">
+          <div className="flex flex-col gap-4">
             <div>
               <h1 className="font-semibold">Intern Name</h1>
               <input
@@ -75,7 +69,7 @@ export default function DocumentsViewModal({
               />
             </div>
           </div>
-          <div className="flex flex-col p-2 gap-5">
+          <div className="flex flex-col gap-4">
             <div>
               <h1 className="font-semibold">File Name</h1>
               <div className="flex justify-start items-center gap-2">
@@ -93,8 +87,8 @@ export default function DocumentsViewModal({
               </div>
             </div>
           </div>
-          <div className="col-span-2">
-            <div className="mt-4">
+          <div className="md:col-span-2">
+            <div className="mt-1">
               <h3 className="text-sm font-medium mb-2">Remarks</h3>
               <textarea
                 value={remarks}
@@ -109,7 +103,7 @@ export default function DocumentsViewModal({
               <div className="mt-4">
                 <h3 className="text-sm font-medium mb-2">Upload File (optional)</h3>
 
-                <div className="border-2 border-dashed border-violet-400 rounded-xl p-6 text-center bg-violet-50/30">
+                <div className="rounded-xl border-2 border-dashed border-violet-400 bg-violet-50/30 p-4 text-center">
                   <div className="flex justify-center mb-3">
                     <div className="bg-violet-500 text-white p-3 rounded-lg">
                       <svg
@@ -145,24 +139,30 @@ export default function DocumentsViewModal({
           </div>
         </div>
 
-        <div className="flex justify-end mt-5 gap-3">
+        <div className="mt-5 flex flex-wrap justify-end gap-2 sm:gap-3">
           {showReviewActions ? (
             <>
               <button
-                onClick={() => {
-                  onCancel?.(remarks);
-                  onClose();
-                }}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 cursor-pointer"
+                onClick={onClose}
+                className="cursor-pointer rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
               >
                 Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onPending?.(remarks);
+                  onClose();
+                }}
+                className="cursor-pointer rounded-md border border-amber-200 px-4 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-50"
+              >
+                Pending
               </button>
               <button
                 onClick={() => {
                   onReject?.(remarks);
                   onClose();
                 }}
-                className="px-4 py-2 bg-rose-500 text-white rounded hover:bg-rose-600 cursor-pointer"
+                className="cursor-pointer rounded-md border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
               >
                 Reject
               </button>
@@ -171,7 +171,7 @@ export default function DocumentsViewModal({
                   onApprove?.(remarks);
                   onClose();
                 }}
-                className="px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 cursor-pointer"
+                className="cursor-pointer rounded-md border border-emerald-200 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
               >
                 Approve
               </button>
@@ -180,11 +180,11 @@ export default function DocumentsViewModal({
             <>
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 cursor-pointer"
+                className="cursor-pointer rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-violet-500 text-white rounded hover:bg-violet-600 cursor-pointer">
+              <button className="cursor-pointer rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700">
                 Submit
               </button>
             </>

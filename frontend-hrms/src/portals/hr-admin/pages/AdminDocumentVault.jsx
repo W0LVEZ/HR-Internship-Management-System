@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, Eye, FileDown, Filter, Search, Upload } from "lucide-react";
+import { ArrowLeft, Download, Eye, FileDown, Filter, Search, TriangleAlert, Upload } from "lucide-react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useRef, useState } from "react";
 import DocumentVault from "../../../common/components/layout/documentVault.jsx";
@@ -11,11 +11,41 @@ const slugify = (value) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const DOCUMENT_VAULT_STORAGE_KEY = "hrims_document_vault_records";
+
+const getDocumentVaultRecords = () => {
+  const storedRecords = localStorage.getItem(DOCUMENT_VAULT_STORAGE_KEY);
+
+  if (!storedRecords) {
+    localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(mockDocumentVaultRecords));
+    return mockDocumentVaultRecords;
+  }
+
+  try {
+    return JSON.parse(storedRecords);
+  } catch {
+    localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(mockDocumentVaultRecords));
+    return mockDocumentVaultRecords;
+  }
+};
+
+const updateDocumentVaultRecord = (folderId, recordId, updater) => {
+  const records = getDocumentVaultRecords();
+  const nextRecords = {
+    ...records,
+    [folderId]: (records[folderId] || []).map((record) =>
+      record.id === recordId ? updater(record) : record,
+    ),
+  };
+
+  localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(nextRecords));
+  return nextRecords;
+};
+
 const statusStyles = {
-  Active: "bg-emerald-100 text-emerald-500",
-  Pending: "bg-amber-100 text-amber-500",
-  Expiring: "bg-amber-100 text-amber-500",
-  Expired: "bg-rose-100 text-rose-500",
+  Approved: "bg-emerald-100 text-emerald-600",
+  Pending: "bg-amber-100 text-amber-600",
+  Rejected: "bg-rose-100 text-rose-600",
 };
 
 const exportRowsToCsv = (fileName, rows) => {
@@ -49,10 +79,41 @@ const formatDateDisplay = (dateValue) => {
 
 const mergeUniversityBranch = (row) => `${row.university} / ${row.branch}`;
 
+const normalizeStatus = (status) => {
+  if (status === "Active" || status === "Verified") return "Approved";
+  if (status === "Expiring") return "Pending";
+  if (status === "Expired") return "Rejected";
+  return status;
+};
+
+const getExpiryTone = (expiryDate) => {
+  const expiry = new Date(expiryDate);
+
+  if (Number.isNaN(expiry.getTime())) {
+    return { tone: "text-slate-500", icon: null, label: "" };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  expiry.setHours(0, 0, 0, 0);
+
+  if (expiry < today) {
+    return { tone: "text-rose-600", icon: TriangleAlert, label: "Expired" };
+  }
+
+  const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+
+  if (daysUntilExpiry <= 30) {
+    return { tone: "text-amber-600", icon: TriangleAlert, label: "Expiring soon" };
+  }
+
+  return { tone: "text-slate-500", icon: null, label: "" };
+};
+
 function AdminDocumentVaultOverview() {
   const navigate = useNavigate();
 
-  return <DocumentVault onFolderSelect={(folder) => navigate(`/hr-admin/document-vault/${folder.slug}`)} />;
+  return <DocumentVault onFolderSelect={(folder) => navigate(`/hr-admin/document-vault/${slugify(folder.title)}`)} />;
 }
 
 function AdminDocumentVaultDetail() {
@@ -83,7 +144,7 @@ function AdminDocumentVaultDetail() {
       mergeUniversityBranch(row),
       row.fileName,
       formatDateDisplay(row.expiryDate),
-      row.status,
+      normalizeStatus(row.status),
     ]));
   };
 
@@ -92,7 +153,7 @@ function AdminDocumentVaultDetail() {
       internName: row.name,
       universityBranch: `${row.university} / ${row.branch}`,
       requestedDate: formatDateDisplay(row.expiryDate),
-      requestedStatus: row.status,
+      requestedStatus: normalizeStatus(row.status),
       fileName: row.fileName,
       fileSize: "1.5 MB",
       fileIcon: (
@@ -108,7 +169,7 @@ function AdminDocumentVaultDetail() {
     return <Navigate to="/hr-admin/document-vault" replace />;
   }
 
-  const rows = mockDocumentVaultRecords[folderId] ?? [];
+  const rows = getDocumentVaultRecords()[folderId] ?? [];
 
   return (
     <div className="space-y-5">
@@ -186,10 +247,29 @@ function AdminDocumentVaultDetail() {
                   <td className="px-4 py-3 text-slate-700">{row.name ?? row.university}</td>
                   <td className="px-4 py-3 text-slate-500">{mergeUniversityBranch(row)}</td>
                   <td className="px-4 py-3 text-slate-700">{row.fileName}</td>
-                  <td className="px-4 py-3 text-slate-500">{formatDateDisplay(row.expiryDate)}</td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const expiryTone = getExpiryTone(row.expiryDate);
+                      const WarningIcon = expiryTone.icon;
+
+                      return (
+                        <div className="flex flex-col gap-0.5">
+                          <div className={`inline-flex items-center gap-1 text-sm ${expiryTone.tone}`}>
+                            {WarningIcon && <WarningIcon size={13} />}
+                            <span>{formatDateDisplay(row.expiryDate)}</span>
+                          </div>
+                          {expiryTone.label && (
+                            <span className={`pl-4 text-[11px] font-medium leading-none ${expiryTone.tone}`}>
+                              {expiryTone.label}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${statusStyles[row.status] ?? "bg-slate-100 text-slate-500"}`}>
-                      {row.status}
+                    <span className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${statusStyles[normalizeStatus(row.status)] ?? "bg-slate-100 text-slate-500"}`}>
+                      {normalizeStatus(row.status)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
