@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
-import TaskManagementPage from "../../../common/components/tasks/TaskManagementPage";
+import FileDropzone from "../../../common/components/ui/FileDropZone";
+import {
+  getTodayISO,
+  formatDateForDisplay,
+} from "../../../common/utils/dateHelper";
 
 export default function Tasks() {
   const { currentUser } = useAuth();
@@ -30,6 +34,39 @@ export default function Tasks() {
 
     setUsersDb(updatedUsersDb);
     localStorage.setItem("hrims_users_db", JSON.stringify(updatedUsersDb));
+  };
+
+  const handlePostComment = () => {
+    if (!commentText.trim() || !selectedTask) return;
+
+    const newComment = {
+      id: crypto.randomUUID(),
+      author: currentUser?.name || "You",
+      message: commentText,
+    };
+
+    updateTask(selectedTask.id, {
+      comments: [...(selectedTask.comments || []), newComment],
+    });
+
+    setCommentText("");
+  };
+
+  const handleSubmitWork = () => {
+    if (!uploadedFile || !selectedTask) return;
+
+    updateTask(selectedTask.id, {
+      deliverable: uploadedFile,
+      status: "Completed",
+      submitted: getTodayISO(),
+      finishDate: getTodayISO(),
+    });
+
+    setUploadedFile("");
+  };
+
+  const getProgress = () => {
+    return selectedTask?.status === "Completed" ? 100 : 0;
   };
 
   if (!currentUser) return null;

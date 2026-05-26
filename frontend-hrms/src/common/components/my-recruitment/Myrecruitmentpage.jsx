@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
   Search, SlidersHorizontal, User, FileText,
@@ -6,6 +6,18 @@ import {
   ChevronLeft, ChevronRight, Mail, ClipboardList
 } from "lucide-react";
 import MyPartnerUnivirsity from "./MyPartnerUnivirsity";
+import { addSystemLog, LOG_TYPES } from "../../utils/systemLogger";
+
+const getRecruitmentApps = () => {
+  const db = JSON.parse(localStorage.getItem("hrims_users_db") || "{}");
+
+  return Object.values(db).filter(u => u.role === "INTERN").map(u => ({
+    ...u, prog: u.course || "Program", uni: u.university || "University",
+    date: u.duration?.split(" - ")[0] || "Date", hrs: u.hours || "200 hrs",
+    year: u.year || "4th Year", dept: u.department || "Department",
+    status: "Pending",
+  }));
+};
 
 export default function Myrecruitmentpage() {
   const { currentUser } = useAuth();
@@ -18,17 +30,7 @@ export default function Myrecruitmentpage() {
   const [f, setF] = useState({ 
     open: false, progs: [], stats: [], tProgs: [], tStats: [] 
   });
-  const [apps, setApps] = useState([]);
-
-  useEffect(() => {
-    const db = JSON.parse(localStorage.getItem("hrims_users_db") || "{}");
-    setApps(Object.values(db).filter(u => u.role === "INTERN").map(u => ({
-      ...u, prog: u.course || "Program", uni: u.university || "University",
-      date: u.duration?.split(" - ")[0] || "Date", hrs: u.hours || "200 hrs",
-      year: u.year || "4th Year", dept: u.department || "Department",
-      status: "Pending",
-    })));
-  }, []);
+  const [apps, setApps] = useState(() => getRecruitmentApps());
 
   const progs = [...new Set(apps.map(a => a.prog))];
   const stats = ["Pending", "Approved", "Rejected", "Deploy"];
@@ -63,7 +65,49 @@ export default function Myrecruitmentpage() {
   }));
   
   const setStat = s => {
-    if (selId) setApps(c => c.map(a => a.id === selId ? { ...a, status: s } : a));
+    if (!selId) return;
+
+    const selectedApp = apps.find(a => a.id === selId);
+    const usersDb = JSON.parse(localStorage.getItem("hrims_users_db") || "{}");
+    const supervisor = usersDb[selectedApp?.supervisorId];
+
+    if (s === "Deploy" && selectedApp && selectedApp.status !== "Deploy") {
+      addSystemLog({
+        action: LOG_TYPES.INTERN_EMPLOYED,
+        title: "New Intern Employed",
+        description: `${selectedApp.name} has been deployed as an employed intern.`,
+        actorId: currentUser?.id,
+        actorName: currentUser?.name,
+        actorRole: currentUser?.role,
+        audience: ["hr-admin", "hr-staff"],
+        supervisorId: selectedApp.supervisorId,
+        internId: selectedApp.id,
+        metadata: {
+          department: selectedApp.department,
+          university: selectedApp.university,
+        },
+      });
+
+      if (selectedApp.supervisorId) {
+        addSystemLog({
+          action: LOG_TYPES.INTERN_ASSIGNED_SUPERVISOR,
+          title: "Intern Assigned to Supervisor",
+          description: `${selectedApp.name} was assigned to ${supervisor?.name || "a supervisor"}.`,
+          actorId: currentUser?.id,
+          actorName: currentUser?.name,
+          actorRole: currentUser?.role,
+          audience: ["hr-admin", "hr-staff", "supervisor", "intern"],
+          supervisorId: selectedApp.supervisorId,
+          internId: selectedApp.id,
+          metadata: {
+            department: selectedApp.department,
+            supervisorName: supervisor?.name,
+          },
+        });
+      }
+    }
+
+    setApps(c => c.map(a => a.id === selId ? { ...a, status: s } : a));
   };
 
   const moveSelection = dir => {

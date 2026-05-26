@@ -69,9 +69,9 @@ const Sidebar = ({
 
       {/* PROFILE ROLE */}
       <SidebarProfile
-        userName={userName}
-        role={role}
         isCollapsed={isCollapsed}
+        passedUserName={userName}
+        passedRole={role}
       />
     </nav>
   );
