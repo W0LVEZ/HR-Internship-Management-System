@@ -3,6 +3,7 @@ import { useState } from "react";
 import { LogIn, LogOut, CalendarRange } from "lucide-react";
 import AttendanceRequestModal from "../components/attendance/AttendanceRequestModal";
 import { useAuth } from "../../../contexts/AuthContext";
+import { showToast } from "../../../common/utils/toast";
 
 export default function Attendance({
   readOnly = false,
@@ -68,6 +69,7 @@ export default function Attendance({
                 onClick={() => {
                   setActiveAction("timeIn");
                   timeIn();
+                  showToast.success("Upload dialog opened");
                 }}
                 className={`p-3 rounded-lg transition ${
                   activeAction === "timeIn"

@@ -1,75 +1,49 @@
 import { useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
-import FileDropzone from "../../../common/components/ui/FileDropZone";
-import {
-  getTodayISO,
-  formatDateForDisplay,
-} from "../../../common/utils/dateHelper";
+import TaskManagementPage from "../../../common/components/tasks/TaskManagementPage";
 
 export default function Tasks() {
   const { currentUser } = useAuth();
 
+  // Load localStorage database
   const [usersDb, setUsersDb] = useState(() => {
     try {
       const storedUsers = localStorage.getItem("hrims_users_db");
+
       return storedUsers ? JSON.parse(storedUsers) : {};
     } catch (error) {
-      console.log("Failed to load users DB: ", error);
+      console.log("Failed to load users DB:", error);
       return {};
     }
   });
 
-  const intern = usersDb[currentUser?.id];
+  // Prevent crash while auth is loading
+  if (!currentUser) return null;
+
+  // Current intern
+  const intern = usersDb[currentUser.id];
+
+  // Intern tasks
   const tasks = intern?.tasks || [];
 
+  // Reusable task updater
   const updateTask = (taskId, updatedFields) => {
     const updatedUsersDb = { ...usersDb };
 
-    updatedUsersDb[currentUser?.id] = {
+    updatedUsersDb[currentUser.id] = {
       ...updatedUsersDb[currentUser.id],
-      tasks: (updatedUsersDb[currentUser.id].tasks || []).map((task) =>
+
+      tasks: (updatedUsersDb[currentUser.id]?.tasks || []).map((task) =>
         task.id === taskId ? { ...task, ...updatedFields } : task,
       ),
     };
 
+    // Update state
     setUsersDb(updatedUsersDb);
+
+    // Save to localStorage
     localStorage.setItem("hrims_users_db", JSON.stringify(updatedUsersDb));
   };
-
-  const handlePostComment = () => {
-    if (!commentText.trim() || !selectedTask) return;
-
-    const newComment = {
-      id: crypto.randomUUID(),
-      author: currentUser?.name || "You",
-      message: commentText,
-    };
-
-    updateTask(selectedTask.id, {
-      comments: [...(selectedTask.comments || []), newComment],
-    });
-
-    setCommentText("");
-  };
-
-  const handleSubmitWork = () => {
-    if (!uploadedFile || !selectedTask) return;
-
-    updateTask(selectedTask.id, {
-      deliverable: uploadedFile,
-      status: "Completed",
-      submitted: getTodayISO(),
-      finishDate: getTodayISO(),
-    });
-
-    setUploadedFile("");
-  };
-
-  const getProgress = () => {
-    return selectedTask?.status === "Completed" ? 100 : 0;
-  };
-
-  if (!currentUser) return null;
 
   return (
     <TaskManagementPage
