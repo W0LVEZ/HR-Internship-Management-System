@@ -34,7 +34,11 @@ export default function AdminNotifications({ isOpen, onClose }) {
       EVALUATION_COMPLETED: 'Evaluation Completed',
       APPLICATION_SUBMITTED: 'New Application',
       DTR_SUBMITTED: 'DTR Submitted',
+      NEW_UNIVERSITY: 'New Partner University',
+      NEW_INTERN: 'New Intern',
+      INTERN_COMPLETED: 'Completed Intern',
       MOA_UPLOADED: 'MOA Uploaded',
+      MOA_EXPIRING: 'MOA Expiring Soon',
       LOGIN: 'User Logged In',
       LOGOUT: 'User Logged Out',
     };
@@ -45,13 +49,18 @@ export default function AdminNotifications({ isOpen, onClose }) {
     if (
       action === 'DOCUMENT_SUBMITTED' ||
       action === 'EVALUATION_COMPLETED' ||
-      action === 'APPLICATION_SUBMITTED'
+      action === 'APPLICATION_SUBMITTED' ||
+      action === 'NEW_UNIVERSITY' ||
+      action === 'NEW_INTERN' ||
+      action === 'INTERN_COMPLETED' ||
+      action === 'MOA_UPLOADED'
     ) {
       return 'success';
     }
     if (
       action === 'ATTENDANCE_REQUEST' ||
-      action === 'DOCUMENT_REQUEST'
+      action === 'DOCUMENT_REQUEST' ||
+      action === 'MOA_EXPIRING'
     ) {
       return 'warning';
     }

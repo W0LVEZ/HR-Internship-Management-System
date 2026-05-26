@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Building2,
   Calendar,
@@ -14,14 +14,28 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import {
+  getStoredMoaUploads,
+  saveMoaUploadToTemporaryDatabase,
+} from "../../utils/mockAuth";
+import { addSystemLog, LOG_TYPES } from "../../utils/systemLogger";
+import { useAuth } from "../../../contexts/AuthContext";
+import UploadMOA from "../../../portals/hr-admin/pages/UploadMOA";
 
 export default function MyPartnerUnivirsity({
   universities = [],
   interns = [],
   search = "",
 }) {
+  const { currentUser } = useAuth();
   const [selectedUniversity, setSelectedUniversity] = useState(null);
   const [showAddPanel, setShowAddPanel] = useState(false);
+  const [showUploadMoa, setShowUploadMoa] = useState(false);
+  const [moaUploads, setMoaUploads] = useState({});
+
+  useEffect(() => {
+    setMoaUploads(getStoredMoaUploads());
+  }, []);
 
   const filteredUniversities = universities.filter((university) =>
     university.name.toLowerCase().includes(search.toLowerCase()),
@@ -31,6 +45,7 @@ export default function MyPartnerUnivirsity({
     const universityInterns = interns.filter(
       (intern) => intern.uni === selectedUniversity.name,
     );
+    const currentMoa = moaUploads[selectedUniversity.id];
 
     return (
       <div className="pt-2">
@@ -98,7 +113,7 @@ export default function MyPartnerUnivirsity({
             <div className="flex flex-col gap-3 border-t border-gray-100 pt-5">
               <div className="flex items-center gap-3">
                 <div className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-700">
-                  MOA.pdf
+                {currentMoa?.fileName || "MOA.pdf"}
                 </div>
                 <button className="p-2 text-gray-600 hover:text-violet-600">
                   <Eye size={17} />
@@ -106,19 +121,32 @@ export default function MyPartnerUnivirsity({
                 <button className="p-2 text-gray-600 hover:text-violet-600">
                   <Download size={17} />
                 </button>
-                <button className="flex items-center gap-2 px-3 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold hover:bg-violet-700">
+                <button
+                  onClick={() => setShowUploadMoa(true)}
+                  className="flex items-center gap-2 px-3 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold hover:bg-violet-700"
+                >
                   <Plus size={16} />
-                  Update MOA
+                  Update new MOA
                 </button>
               </div>
 
               <p className="text-[10px] text-gray-500">
-                Current MOA Upload Date: January 15, 2024
+                Current MOA Upload Date:{" "}
+                {formatDisplayDate(currentMoa?.uploadedAt) ||
+                  "January 15, 2024"}
               </p>
 
               <div className="grid grid-cols-3 gap-3">
-                <MoaBadge label="Effective" value="Date" tone="green" />
-                <MoaBadge label="Expiry" value="Date" tone="red" />
+                <MoaBadge
+                  label="Effective"
+                  value={formatShortDate(currentMoa?.startDate) || "Date"}
+                  tone="green"
+                />
+                <MoaBadge
+                  label="Expiry"
+                  value={formatShortDate(currentMoa?.endDate) || "Date"}
+                  tone="red"
+                />
                 <MoaBadge label="Status" value="ACTIVE" tone="solid" />
               </div>
 
@@ -200,6 +228,37 @@ export default function MyPartnerUnivirsity({
             </table>
           </div>
         </section>
+
+        {showUploadMoa && (
+          <UploadMOA
+            universities={universities}
+            initialUniversity={selectedUniversity}
+            onClose={() => setShowUploadMoa(false)}
+            onApply={async (moa) => {
+              const savedMoa = await saveMoaUploadToTemporaryDatabase(moa);
+              addSystemLog({
+                action: LOG_TYPES.MOA_UPLOADED,
+                title: "New MOA received",
+                description: `${savedMoa.fileName} was uploaded for ${savedMoa.universityName}.`,
+                actorId: currentUser?.id,
+                actorName: currentUser?.name || "HR Admin",
+                actorRole: currentUser?.role || "HR Admin",
+                audience: ["hr-admin", "hr-staff"],
+                metadata: {
+                  universityId: savedMoa.universityId,
+                  universityName: savedMoa.universityName,
+                  fileName: savedMoa.fileName,
+                  endDate: savedMoa.endDate,
+                },
+              });
+              const targetId = savedMoa.universityId;
+              setMoaUploads((previous) => ({
+                ...previous,
+                [targetId]: savedMoa,
+              }));
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -448,4 +507,22 @@ function getInitials(name) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function formatDisplayDate(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatShortDate(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
 }

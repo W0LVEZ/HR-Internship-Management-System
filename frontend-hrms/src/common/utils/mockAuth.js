@@ -1,3 +1,5 @@
+import { getSystemLogs, LOG_TYPES } from "./systemLogger.js";
+
 const mockUsers = {
   // --- STAFF & ADMIN (Simple Data) ---
   admin_system: {
@@ -300,8 +302,22 @@ export const dummyDepartments = [
 
 const USERS_DB_KEY = "hrims_users_db";
 const DEPARTMENTS_DB_KEY = "hrims_departments_db";
+const MOA_UPLOADS_DB_KEY = "hrims_moa_uploads_db";
 
 const canUseLocalStorage = () => typeof window !== "undefined" && window.localStorage;
+
+const readFileAsDataUrl = (file) =>
+  new Promise((resolve) => {
+    if (!file || typeof FileReader === "undefined") {
+      resolve("");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result || "");
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
 
 export const getStoredDepartments = () => {
   if (!canUseLocalStorage()) {
@@ -391,6 +407,314 @@ export const addEmployeeToTemporaryDatabase = (departmentTitle, employeeData) =>
   return { employeeId, departments: nextDepartments };
 };
 
+export const getStoredMoaUploads = () => {
+  if (!canUseLocalStorage()) {
+    return {};
+  }
+
+  const storedUploads = localStorage.getItem(MOA_UPLOADS_DB_KEY);
+
+  if (!storedUploads) {
+    localStorage.setItem(MOA_UPLOADS_DB_KEY, JSON.stringify({}));
+    return {};
+  }
+
+  try {
+    return JSON.parse(storedUploads);
+  } catch {
+    localStorage.setItem(MOA_UPLOADS_DB_KEY, JSON.stringify({}));
+    return {};
+  }
+};
+
+export const saveMoaUploadToTemporaryDatabase = async (moaData) => {
+  const now = moaData.uploadedAt || new Date().toISOString();
+  const university = moaData.university || {};
+  const universityId = String(university.id ?? Date.now());
+  const file = moaData.file;
+  const fileDataUrl = await readFileAsDataUrl(file);
+  const previousUploads = getStoredMoaUploads();
+  const previousUniversityUpload = previousUploads[universityId];
+
+  const nextUpload = {
+    id: `${universityId}-${Date.now()}`,
+    universityId,
+    universityName: university.name || "University",
+    branch: university.branch || "Branch/Campus",
+    startDate: moaData.startDate,
+    endDate: moaData.endDate,
+    applyToAll: Boolean(moaData.applyToAll),
+    status: "ACTIVE",
+    uploadedAt: now,
+    fileName: file?.name || "MOA.pdf",
+    fileType: file?.type || "application/pdf",
+    fileSize: file?.size || 0,
+    fileDataUrl,
+  };
+
+  const nextUploads = {
+    ...previousUploads,
+    [universityId]: {
+      ...nextUpload,
+      history: [nextUpload, ...(previousUniversityUpload?.history || [])],
+    },
+  };
+
+  if (!canUseLocalStorage()) {
+    return nextUploads[universityId];
+  }
+
+  try {
+    localStorage.setItem(MOA_UPLOADS_DB_KEY, JSON.stringify(nextUploads));
+    return nextUploads[universityId];
+  } catch {
+    const smallerUpload = {
+      ...nextUpload,
+      fileDataUrl: "",
+      storageWarning: "File content was too large for temporary browser storage.",
+    };
+    const smallerUploads = {
+      ...previousUploads,
+      [universityId]: {
+        ...smallerUpload,
+        history: [
+          smallerUpload,
+          ...(previousUniversityUpload?.history || []).map((upload) => ({
+            ...upload,
+            fileDataUrl: "",
+          })),
+        ],
+      },
+    };
+
+    localStorage.setItem(MOA_UPLOADS_DB_KEY, JSON.stringify(smallerUploads));
+    return smallerUploads[universityId];
+  }
+};
+
+const parseInternshipDuration = (duration = "") => {
+  const [startValue, endValue] = duration.split(" - ");
+  const startDate = startValue ? new Date(startValue) : null;
+  const endDate = endValue ? new Date(endValue) : null;
+
+  return {
+    startDate: startDate && !Number.isNaN(startDate.getTime()) ? startDate : null,
+    endDate: endDate && !Number.isNaN(endDate.getTime()) ? endDate : null,
+  };
+};
+
+const getInternLifecycleStatus = (intern, today = new Date()) => {
+  const status = intern.status || intern.internshipStatus || "";
+
+  if (status === "Completed") return "Completed";
+  if (["Deploy", "Active", "Approved"].includes(status)) return "Active";
+
+  const { startDate, endDate } = parseInternshipDuration(intern.duration);
+  if (endDate && endDate < today) return "Completed";
+  if (startDate && endDate && startDate <= today && today <= endDate) {
+    return "Active";
+  }
+
+  return status || "Pending";
+};
+
+const activityLabels = {
+  [LOG_TYPES.NEW_UNIVERSITY]: "New partner university",
+  [LOG_TYPES.NEW_INTERN]: "New intern received",
+  [LOG_TYPES.INTERN_COMPLETED]: "Intern completed",
+  [LOG_TYPES.MOA_UPLOADED]: "New MOA received",
+  [LOG_TYPES.MOA_EXPIRING]: "MOA expiring soon",
+};
+
+const activityColors = {
+  [LOG_TYPES.NEW_UNIVERSITY]: "bg-violet-300",
+  [LOG_TYPES.NEW_INTERN]: "bg-sky-300",
+  [LOG_TYPES.INTERN_COMPLETED]: "bg-emerald-400",
+  [LOG_TYPES.MOA_UPLOADED]: "bg-blue-300",
+  [LOG_TYPES.MOA_EXPIRING]: "bg-amber-400",
+};
+
+const getActivityTimestamp = (value) => {
+  const timestamp = value ? new Date(value).getTime() : Date.now();
+  return Number.isNaN(timestamp) ? Date.now() : timestamp;
+};
+
+const toDashboardActivity = ({ action, description, createdAt, id }) => ({
+  id: id || `${action}-${createdAt}-${description}`,
+  action,
+  label: activityLabels[action] || "System activity",
+  description,
+  color: activityColors[action] || "bg-slate-300",
+  createdAt,
+  timestamp: getActivityTimestamp(createdAt),
+});
+
+export const getHrAdminRecentActivities = (limit = 5) => {
+  const users = canUseLocalStorage()
+    ? JSON.parse(localStorage.getItem(USERS_DB_KEY) || JSON.stringify(mockUsers))
+    : mockUsers;
+  const interns = Object.values(users).filter((user) => user.role === "INTERN");
+  const moaUploads = Object.values(getStoredMoaUploads());
+  const wantedActions = new Set([
+    LOG_TYPES.NEW_UNIVERSITY,
+    LOG_TYPES.NEW_INTERN,
+    LOG_TYPES.INTERN_COMPLETED,
+    LOG_TYPES.MOA_UPLOADED,
+    LOG_TYPES.MOA_EXPIRING,
+  ]);
+  const today = new Date();
+  const expiringWindow = new Date(today);
+  expiringWindow.setDate(today.getDate() + 30);
+
+  const loggedActivities = getSystemLogs()
+    .filter((log) => wantedActions.has(log.action))
+    .map((log) =>
+      toDashboardActivity({
+        id: log.id,
+        action: log.action,
+        description: log.description,
+        createdAt: log.createdAt,
+      }),
+    );
+
+  const universityActivities = Array.from(
+    interns.reduce((universities, intern) => {
+      if (!intern.university || universities.has(intern.university)) {
+        return universities;
+      }
+
+      const { startDate } = parseInternshipDuration(intern.duration);
+      universities.set(
+        intern.university,
+        toDashboardActivity({
+          action: LOG_TYPES.NEW_UNIVERSITY,
+          description: `${intern.university} is now listed as a partner university.`,
+          createdAt: intern.createdAt || startDate?.toISOString() || new Date().toISOString(),
+        }),
+      );
+      return universities;
+    }, new Map()).values(),
+  );
+
+  const internActivities = interns.map((intern) => {
+    const { startDate } = parseInternshipDuration(intern.duration);
+    return toDashboardActivity({
+      action: LOG_TYPES.NEW_INTERN,
+      description: `${intern.name} from ${intern.university || "a partner university"} was added.`,
+      createdAt: intern.createdAt || startDate?.toISOString() || new Date().toISOString(),
+    });
+  });
+
+  const completedActivities = interns
+    .filter((intern) => getInternLifecycleStatus(intern, today) === "Completed")
+    .map((intern) => {
+      const { endDate } = parseInternshipDuration(intern.duration);
+      return toDashboardActivity({
+        action: LOG_TYPES.INTERN_COMPLETED,
+        description: `${intern.name} completed the internship program.`,
+        createdAt: endDate?.toISOString() || intern.updatedAt || new Date().toISOString(),
+      });
+    });
+
+  const moaActivities = moaUploads.map((moa) =>
+    toDashboardActivity({
+      id: moa.id,
+      action: LOG_TYPES.MOA_UPLOADED,
+      description: `${moa.fileName} was uploaded for ${moa.universityName}.`,
+      createdAt: moa.uploadedAt,
+    }),
+  );
+
+  const expiringMoaActivities = moaUploads
+    .filter((moa) => {
+      const endDate = new Date(moa.endDate);
+      return (
+        moa.endDate &&
+        !Number.isNaN(endDate.getTime()) &&
+        endDate >= today &&
+        endDate <= expiringWindow
+      );
+    })
+    .map((moa) =>
+      toDashboardActivity({
+        id: `${moa.id}-expiring`,
+        action: LOG_TYPES.MOA_EXPIRING,
+        description: `${moa.universityName}'s MOA expires on ${new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }).format(new Date(moa.endDate))}.`,
+        createdAt: moa.endDate,
+      }),
+    );
+
+  return [
+    ...loggedActivities,
+    ...moaActivities,
+    ...expiringMoaActivities,
+    ...completedActivities,
+    ...internActivities,
+    ...universityActivities,
+  ]
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .filter(
+      (activity, index, activities) =>
+        index ===
+        activities.findIndex(
+          (candidate) =>
+            candidate.action === activity.action &&
+            candidate.description === activity.description,
+        ),
+    )
+    .slice(0, limit);
+};
+
+export const getHrAdminDashboardMetrics = () => {
+  const users = canUseLocalStorage()
+    ? JSON.parse(localStorage.getItem(USERS_DB_KEY) || JSON.stringify(mockUsers))
+    : mockUsers;
+  const interns = Object.values(users).filter((user) => user.role === "INTERN");
+  const totalInterns = interns.length;
+  const completedInterns = interns.filter(
+    (intern) => getInternLifecycleStatus(intern) === "Completed",
+  ).length;
+  const activeInterns = interns.filter(
+    (intern) => getInternLifecycleStatus(intern) === "Active",
+  ).length;
+  const partnerUniversities = new Set(
+    interns.map((intern) => intern.university).filter(Boolean),
+  ).size;
+  const getPercent = (value) =>
+    totalInterns ? `${Math.round((value / totalInterns) * 100)}%` : "0%";
+
+  return [
+    {
+      title: "Total Interns",
+      value: String(totalInterns),
+      trend: "100%",
+      trendType: "up",
+    },
+    {
+      title: "Completed Interns",
+      value: String(completedInterns),
+      trend: getPercent(completedInterns),
+      trendType: "up",
+    },
+    {
+      title: "Active Interns",
+      value: String(activeInterns),
+      trend: getPercent(activeInterns),
+      trendType: "up",
+    },
+    {
+      title: "Partner Universities",
+      value: String(partnerUniversities),
+      trend: "100%",
+      trendType: "up",
+    },
+  ];
+};
+
 // It writes the data above into the browser so the app can use it.
 export const initializeMockDatabase = () => {
   if (!localStorage.getItem(USERS_DB_KEY)) {
@@ -406,6 +730,9 @@ export const initializeMockDatabase = () => {
 
   if (!localStorage.getItem("hrims_evaluations_db")) {
     localStorage.setItem("hrims_evaluations_db", JSON.stringify([]));
+  }
+  if (!localStorage.getItem(MOA_UPLOADS_DB_KEY)) {
+    localStorage.setItem(MOA_UPLOADS_DB_KEY, JSON.stringify({}));
   }
   console.log("✅ Mock Database Updated with Profile Data!");
 };
