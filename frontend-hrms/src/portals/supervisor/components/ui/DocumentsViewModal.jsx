@@ -24,6 +24,14 @@ export default function DocumentsViewModal({ isOpen, onClose, document }) {
                 <h1 className="font-semibold">Requested</h1>
                 <input type="text" value={document.requestedDate} className="outline-none px-2 py-1 border border-gray-300 rounded-lg bg-gray-100/50 cursor-not-allowed" readOnly />
               </div>
+              <div>
+                <h1 className="font-semibold">Document Type</h1>
+                <input type="text" value={document.documentType ?? "-"} className="outline-none px-2 py-1 border border-gray-300 rounded-lg bg-gray-100/50 cursor-not-allowed" readOnly />
+              </div>
+              <div>
+                <h1 className="font-semibold">Due Date</h1>
+                <input type="text" value={document.dueDate ?? "-"} className="outline-none px-2 py-1 border border-gray-300 rounded-lg bg-gray-100/50 cursor-not-allowed" readOnly />
+              </div>
             </div>
             <div className="flex flex-col p-2 gap-5">
               <div>

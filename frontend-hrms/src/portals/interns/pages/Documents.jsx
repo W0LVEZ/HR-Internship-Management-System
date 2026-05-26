@@ -18,12 +18,16 @@ export default function Documents() {
       id: 1,
       name: "Evaluation.pdf",
       date: "02-12-2026",
+      documentType: "Evaluation Form",
+      dueDate: "05-22-2026",
       status: "Approved",
     },
     {
       id: 2,
       name: "COC.pdf",
       date: "02-12-2026",
+      documentType: "Certificate of Completion",
+      dueDate: "05-22-2026",
       status: "Pending",
     },
   ];
@@ -83,9 +87,11 @@ export default function Documents() {
 
         {/* Document Table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-4 px-6 py-3 text-xs text-gray-400 font-semibold border-b border-gray-200">
+          <div className="grid grid-cols-6 px-6 py-3 text-xs text-gray-400 font-semibold border-b border-gray-200">
             <p>File Name</p>
             <p className="text-center">Date Requested</p>
+            <p className="text-center">Document Type</p>
+            <p className="text-center">Due Date</p>
             <p className="text-center">Status</p>
             <p className="text-right">Action</p>
           </div>
@@ -94,7 +100,7 @@ export default function Documents() {
           {documents.map((doc) => (
             <div
               key={doc.id}
-              className="grid grid-cols-4 px-6 py-4 items-center border-b border-gray-200 last:border-none hover:bg-gray-50 transition"
+              className="grid grid-cols-6 px-6 py-4 items-center border-b border-gray-200 last:border-none hover:bg-gray-50 transition"
             >
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center text-purple-500 rounded-lg">
@@ -109,7 +115,9 @@ export default function Documents() {
               </div>
 
               <p className="text-sm text-gray-500 text-center">{doc.date}</p>
-              <div className=" text-center">
+              <p className="text-sm text-gray-500 text-center">{doc.documentType}</p>
+              <p className="text-sm text-gray-500 text-center">{doc.dueDate}</p>
+              <div className="text-center">
                 <span
                   className={`text-xs px-2 py-1 rounded-md font-medium
             ${

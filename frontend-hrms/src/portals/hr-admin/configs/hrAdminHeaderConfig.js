@@ -19,6 +19,22 @@ export const hrAdminHeaderConfig = {
     title: "Document Vault",
     subtitle: "Compliance & Record Keeping",
   },
+  "/hr-admin/document-vault/:folderId": {
+    getTitle: ({ params }) =>
+      ({
+        moa: "MOA",
+        nda: "NDA",
+        "endorsement-letter": "Endorsement Letter",
+      }[params.folderId] ?? "Document Vault"),
+    getSubtitle: ({ params }) =>
+      `Document Vault · ${
+        {
+          moa: "MOA",
+          nda: "NDA",
+          "endorsement-letter": "Endorsement Letter",
+        }[params.folderId] ?? "Selected folder"
+      }`,
+  },
   "/hr-admin/reports-and-analytics": {
     title: "Reports & Analytics",
     subtitle: "Performance Tracking",
