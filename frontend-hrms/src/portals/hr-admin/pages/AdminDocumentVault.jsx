@@ -122,6 +122,9 @@ function AdminDocumentVaultDetail() {
   const uploadInputRef = useRef(null);
   const [openPreview, setOpenPreview] = useState(false);
   const [previewDocument, setPreviewDocument] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState(["Approved", "Pending", "Rejected"]);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const folder = dummyFolders.find((item) => slugify(item.title) === folderId);
 
   const handleUploadClick = () => {
@@ -139,7 +142,7 @@ function AdminDocumentVaultDetail() {
   };
 
   const handleExport = () => {
-    exportRowsToCsv(`${folderId}-documents.csv`, rows.map((row) => [
+    exportRowsToCsv(`${folderId}-documents.csv`, filteredRows.map((row) => [
       row.name,
       mergeUniversityBranch(row),
       row.fileName,
@@ -147,6 +150,26 @@ function AdminDocumentVaultDetail() {
       normalizeStatus(row.status),
     ]));
   };
+
+  const toggleStatusFilter = (status) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
+    );
+  };
+
+  const rows = getDocumentVaultRecords()[folderId] ?? [];
+
+  const filteredRows = rows.filter((row) => {
+    const normalizedStatus = normalizeStatus(row.status);
+    const matchesStatus = selectedStatuses.includes(normalizedStatus);
+    const matchesSearch =
+      searchTerm === "" ||
+      row.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      row.fileName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      row.university?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      row.branch?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   const handleViewDocument = (row) => {
     setPreviewDocument({
@@ -168,8 +191,6 @@ function AdminDocumentVaultDetail() {
   if (!folder) {
     return <Navigate to="/hr-admin/document-vault" replace />;
   }
-
-  const rows = getDocumentVaultRecords()[folderId] ?? [];
 
   return (
     <div className="space-y-5">
@@ -193,6 +214,8 @@ function AdminDocumentVaultDetail() {
                 <input
                   type="text"
                   placeholder="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-0"
                 />
               </div>
@@ -215,10 +238,54 @@ function AdminDocumentVaultDetail() {
                 <FileDown size={16} />
                 Export
               </button>
-              <button className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                <Filter size={16} />
-                Filter
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  <Filter size={16} />
+                  Filter
+                </button>
+                {showFilterDropdown && (
+                  <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl border border-slate-200 bg-white shadow-lg z-10">
+                    <div className="p-3 border-b border-slate-100">
+                      <p className="text-xs font-semibold text-slate-600 uppercase">Status</p>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {["Approved", "Pending", "Rejected"].map((status) => (
+                        <label key={status} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded">
+                          <input
+                            type="checkbox"
+                            checked={selectedStatuses.includes(status)}
+                            onChange={() => toggleStatusFilter(status)}
+                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className={`text-sm font-medium inline-flex rounded-md px-2 py-1 ${statusStyles[status]}`}>
+                            {status}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="border-t border-slate-100 p-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStatuses(["Approved", "Pending", "Rejected"])}
+                        className="flex-1 text-xs font-medium text-slate-600 hover:text-slate-900 py-1"
+                      >
+                        Reset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowFilterDropdown(false)}
+                        className="flex-1 text-xs font-medium bg-indigo-900 text-white rounded-lg py-1 hover:bg-indigo-950"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -239,7 +306,7 @@ function AdminDocumentVaultDetail() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => (
+              {filteredRows.map((row, index) => (
                 <tr key={`${row.file}-${index}`} className="border-b border-slate-100 last:border-none hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
@@ -292,6 +359,12 @@ function AdminDocumentVaultDetail() {
             </tbody>
           </table>
         </div>
+
+        {filteredRows.length === 0 && (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
+            <p className="text-slate-600">No documents match your filters. Try adjusting your search or status filters.</p>
+          </div>
+        )}
       </div>
 
       <DocumentsViewModal

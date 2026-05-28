@@ -1,10 +1,19 @@
-import { Download, Eye } from 'lucide-react';
+import { Download, Eye, Filter, Search } from 'lucide-react';
 import { useState } from 'react';
 import DocumentsViewModal from "../components/ui/DocumentsViewModal";
+
+const statusStyles = {
+  Approved: "bg-emerald-100 text-emerald-600",
+  Pending: "bg-amber-100 text-amber-600",
+  Rejected: "bg-rose-100 text-rose-600",
+};
 
 export default function SupervisorDocuments() {
   const [openPreview, setOpenPreview] = useState(false);
   const [previewDocument, setPreviewDocument] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState(["Approved", "Pending", "Rejected"]);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
   const documentsAllData = [
     {
@@ -47,22 +56,87 @@ export default function SupervisorDocuments() {
       fileSize : "1.6 MB"
     },
   ]
+
+  const toggleStatusFilter = (status) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
+    );
+  };
+
+  const filteredDocuments = documentsAllData.filter((doc) => {
+    const matchesStatus = selectedStatuses.includes(doc.requestedStatus);
+    const matchesSearch =
+      searchTerm === "" ||
+      doc.internName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.fileName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.documentType?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
   return (
     <>
     <div className="border border-gray-300 rounded-lg p-5">
 
-      <div className="flex justify-between items-center">
-          <div className="search-bar">
-            <input type="search" name="search" id="" placeholder="Search interns..." className="border border-gray-500/20 rounded-lg py-2 px-3 w-70 focus:outline-none focus:ring-2 focus:ring-[#7C3EFF]" />
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between pb-5 border-b border-slate-100">
+          <div className="relative w-full max-w-[320px]">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              name="search"
+              placeholder="Search interns..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-0"
+            />
           </div>
-          <div className="filter-options flex items-center space-x-4">  
-            <select id="" className="border border-gray-500/20 w-23 rounded-lg ms-3 py-2 px-3 focus:outline-none hover:border-gray-500/40 cursor-pointer">
-              <option disabled selected>Filter</option>
-              <option value="2023-10-01">by Intern Name</option>
-              <option value="2023-10-02">by File Name</option>
-              <option value="2023-10-03">by Requested</option>
-              <option value="2023-10-03">by Requested Status</option>
-            </select>
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              <Filter size={16} />
+              Filter
+            </button>
+            {showFilterDropdown && (
+              <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl border border-slate-200 bg-white shadow-lg z-10">
+                <div className="p-3 border-b border-slate-100">
+                  <p className="text-xs font-semibold text-slate-600 uppercase">Status</p>
+                </div>
+                <div className="p-3 space-y-2">
+                  {["Approved", "Pending", "Rejected"].map((status) => (
+                    <label key={status} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.includes(status)}
+                        onChange={() => toggleStatusFilter(status)}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className={`text-sm font-medium inline-flex rounded-md px-2 py-1 ${statusStyles[status]}`}>
+                        {status}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <div className="border-t border-slate-100 p-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStatuses(["Approved", "Pending", "Rejected"])}
+                    className="flex-1 text-xs font-medium text-slate-600 hover:text-slate-900 py-1"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFilterDropdown(false)}
+                    className="flex-1 text-xs font-medium bg-indigo-900 text-white rounded-lg py-1 hover:bg-indigo-950"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -80,7 +154,7 @@ export default function SupervisorDocuments() {
               </tr>
             </thead>
             <tbody className="text-sm">
-              {documentsAllData.map((data, index) => (
+              {filteredDocuments.map((data, index) => (
               <tr key={index}>
                 <td>
                   <div className="py-2 flex justify-start items-center gap-2">
@@ -101,17 +175,9 @@ export default function SupervisorDocuments() {
                 <td><p className="text-sm text-gray-700">{data.documentType}</p></td>
                 <td><p className="text-sm text-gray-500">{data.dueDate}</p></td>
                 <td className="text-xs">
-                  {data.requestedStatus === "Approved" ? (
-                  <div className="bg-green-200 text-green-500 inline-block p-1 rounded-lg">
-                    <span>{data.requestedStatus}</span>
-                  </div>) : data.requestedStatus === "Pending" ? (
-                    <div className="bg-yellow-200/70 text-yellow-400 inline-block p-1 rounded-lg">
-                      <span>{data.requestedStatus}</span>
-                    </div>) : (
-                      <div className="bg-red-100 text-red-500 inline-block p-1 rounded-lg">
-                        <span>{data.requestedStatus}</span>
-                      </div>
-                    )}
+                  <span className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${statusStyles[data.requestedStatus] ?? "bg-slate-100 text-slate-500"}`}>
+                    {data.requestedStatus}
+                  </span>
                 </td>
                 <td>
                   <div className="flex justify-start gap-5 items-center transition">
@@ -131,6 +197,12 @@ export default function SupervisorDocuments() {
             </tbody>
           </table>
         </div>
+
+        {filteredDocuments.length === 0 && (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
+            <p className="text-slate-600">No documents match your filters. Try adjusting your search or status filters.</p>
+          </div>
+        )}
         <DocumentsViewModal
         isOpen={openPreview}
         onClose={() => setOpenPreview(false)}
