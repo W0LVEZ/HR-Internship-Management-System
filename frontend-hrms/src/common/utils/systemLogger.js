@@ -145,19 +145,13 @@ export const addSystemLog = (log) => {
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     timestamp: new Date().toLocaleString(),
-    action: log.action || log.type || "SYSTEM_ACTIVITY",
-    type: log.type || log.action || "SYSTEM_ACTIVITY",
-    title: log.title || "System Activity",
-    description: log.description || "A system activity was recorded.",
-
-    //Who did the action
     actorId: log.actorId || null,
     actorName: log.actorName || "Unknown",
     actorRole: log.actorRole || "Unknown",
     user: log.actorName || "Unknown",
     role: log.actorRole || "Unknown",
-    action: log.action || "SYSTEM_ACTIVITY",
-    type: log.action || "SYSTEM_ACTIVITY",
+    action: log.action || log.type || "SYSTEM_ACTIVITY",
+    type: log.type || log.action || "SYSTEM_ACTIVITY",
     title: log.title || log.action || "System Activity",
     description: log.description || "Activity recorded.",
 

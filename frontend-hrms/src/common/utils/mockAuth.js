@@ -890,7 +890,7 @@ export const mockDocumentVaultRecords = {
       branch: 'Branch 1',
       fileName: 'MOA-university-Branch 1',
       expiryDate: '2026-06-18',
-      status: 'Active',
+      status: 'Approved',
       updatedAt: '2026-05-16',
     },
     {
@@ -910,7 +910,7 @@ export const mockDocumentVaultRecords = {
       branch: 'Branch 1',
       fileName: 'MOA-university-Branch 1',
       expiryDate: '2026-06-22',
-      status: 'Active',
+      status: 'Approved',
       updatedAt: '2026-05-14',
     },
     {
@@ -920,7 +920,7 @@ export const mockDocumentVaultRecords = {
       branch: 'Branch 1',
       fileName: 'MOA-university-Branch 1',
       expiryDate: '2026-05-28',
-      status: 'Expiring',
+      status: 'Rejected',
       updatedAt: '2026-05-13',
     },
   ],
@@ -932,7 +932,7 @@ export const mockDocumentVaultRecords = {
       branch: 'Main Campus',
       fileName: 'NDA-university-A',
       expiryDate: '2026-06-30',
-      status: 'Active',
+      status: 'Approved',
       updatedAt: '2026-05-17',
     },
     {
@@ -952,7 +952,7 @@ export const mockDocumentVaultRecords = {
       branch: 'South Campus',
       fileName: 'NDA-university-C',
       expiryDate: '2026-05-22',
-      status: 'Expired',
+      status: 'Rejected',
       updatedAt: '2026-05-12',
     },
   ],
@@ -964,7 +964,7 @@ export const mockDocumentVaultRecords = {
       branch: 'Branch 1',
       fileName: 'Endorsement-university-X',
       expiryDate: '2026-06-25',
-      status: 'Active',
+      status: 'Approved',
       updatedAt: '2026-05-16',
     },
     {
@@ -974,8 +974,58 @@ export const mockDocumentVaultRecords = {
       branch: 'Branch 2',
       fileName: 'Endorsement-university-Y',
       expiryDate: '2026-06-12',
-      status: 'Expiring',
+      status: 'Pending',
       updatedAt: '2026-05-13',
     },
   ],
+};
+
+const DOCUMENT_VAULT_STORAGE_KEY = 'hrims_document_vault_records';
+
+const cloneDocumentVaultRecords = (records) =>
+  JSON.parse(JSON.stringify(records));
+
+const getDefaultDocumentVaultRecords = () => cloneDocumentVaultRecords(mockDocumentVaultRecords);
+
+const readDocumentVaultStore = () => {
+  if (typeof localStorage === 'undefined') {
+    return getDefaultDocumentVaultRecords();
+  }
+
+  const storedRecords = localStorage.getItem(DOCUMENT_VAULT_STORAGE_KEY);
+
+  if (!storedRecords) {
+    const defaultRecords = getDefaultDocumentVaultRecords();
+    localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(defaultRecords));
+    return defaultRecords;
+  }
+
+  try {
+    return JSON.parse(storedRecords);
+  } catch {
+    const defaultRecords = getDefaultDocumentVaultRecords();
+    localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(defaultRecords));
+    return defaultRecords;
+  }
+};
+
+export const getDocumentVaultRecords = () => readDocumentVaultStore();
+
+export const setDocumentVaultRecords = (records) => {
+  if (typeof localStorage === 'undefined') return records;
+
+  localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(records));
+  return records;
+};
+
+export const updateDocumentVaultRecord = (folderId, recordId, updater) => {
+  const records = readDocumentVaultStore();
+  const nextRecords = {
+    ...records,
+    [folderId]: (records[folderId] || []).map((record) =>
+      record.id === recordId ? updater(record) : record,
+    ),
+  };
+
+  return setDocumentVaultRecords(nextRecords);
 };

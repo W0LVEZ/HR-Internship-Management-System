@@ -29,6 +29,8 @@ export default function AdminNotifications({ isOpen, onClose }) {
       TIME_OUT: 'Intern Timed Out',
       TASK_ASSIGNED: 'New Task Assigned',
       DOCUMENT_SUBMITTED: 'Document Submitted',
+      DOCUMENT_APPROVED: 'Document Approved',
+      DOCUMENT_REJECTED: 'Document Rejected',
       ATTENDANCE_REQUEST: 'Attendance Request',
       DOCUMENT_REQUEST: 'Document Request',
       EVALUATION_COMPLETED: 'Evaluation Completed',
@@ -46,6 +48,13 @@ export default function AdminNotifications({ isOpen, onClose }) {
   };
 
   const getNotificationType = (action) => {
+    if (action === 'DOCUMENT_APPROVED') {
+      return 'success';
+    }
+    if (action === 'DOCUMENT_REJECTED') {
+      return 'warning';
+    }
+
     if (
       action === 'DOCUMENT_SUBMITTED' ||
       action === 'EVALUATION_COMPLETED' ||
@@ -75,21 +84,7 @@ export default function AdminNotifications({ isOpen, onClose }) {
         return <AlertCircle className="text-yellow-500" size={20} />;
       case 'info':
         return <Clock className="text-blue-500" size={20} />;
-      default:
-        return <Bell className="text-slate-500" size={20} />;
-    }
-  };
-
-  const markAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((notif) =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
-  };
-
-  const deleteNotification = (id) => {
-    setNotifications((prev) => prev.filter((notif) => notif.id !== id));
+(notif) => notif.id !== id;
   };
 
   const markAllAsRead = () => {
@@ -259,4 +254,4 @@ export default function AdminNotifications({ isOpen, onClose }) {
       </div>
     </>
   );
-}
+}}
