@@ -1,5 +1,5 @@
 import { Search, Upload, Download, Filter, FolderOpen, TriangleAlert } from 'lucide-react';
-import { useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { dummyFolders, mockDocumentVaultRecords } from '../../../common/utils/mockAuth.js';
 
 const slugify = (value) =>
@@ -54,17 +54,48 @@ const isExpired = (expiryDate) => {
 
 export default function DocumentVault({ onFolderSelect }) {
   const uploadInputRef = useRef(null);
+  const [search, setSearch] = useState('');
   const documentVaultRecords = getDocumentVaultRecords();
-  const folders = dummyFolders.map((folder) => {
-    const folderId = slugify(folder.title);
-    const records = documentVaultRecords[folderId] ?? [];
+  const folders = useMemo(
+    () =>
+      dummyFolders.map((folder) => {
+        const folderId = slugify(folder.title);
+        const records = documentVaultRecords[folderId] ?? [];
 
-    return {
-      ...folder,
-      files: records.length,
-      expiringSoon: records.filter((record) => isExpiringSoon(record.expiryDate)).length,
-      expired: records.filter((record) => isExpired(record.expiryDate)).length,
-    };
+        return {
+          ...folder,
+          files: records.length,
+          expiringSoon: records.filter((record) => isExpiringSoon(record.expiryDate)).length,
+          expired: records.filter((record) => isExpired(record.expiryDate)).length,
+          records,
+        };
+      }),
+    [documentVaultRecords],
+  );
+
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const filteredFolders = folders.filter((folder) => {
+    if (!normalizedSearch) return true;
+
+    const folderMatches = folder.title.toLowerCase().includes(normalizedSearch);
+
+    const recordMatches = folder.records.some((record) => {
+      const searchableText = [
+        record.name,
+        record.university,
+        record.branch,
+        record.fileName,
+        record.status,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(normalizedSearch);
+    });
+
+    return folderMatches || recordMatches;
   });
 
   const handleUploadClick = () => {
@@ -113,6 +144,8 @@ export default function DocumentVault({ onFolderSelect }) {
               <input
                 type="text"
                 placeholder="Search documents"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
                 className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-0"
               />
             </div>
@@ -145,7 +178,8 @@ export default function DocumentVault({ onFolderSelect }) {
         <input ref={uploadInputRef} type="file" className="hidden" onChange={handleUploadChange} />
 
         <div className="grid gap-3 sm:grid-cols-3">
-          {folders.map((folder) => (
+          {filteredFolders.length > 0 ? (
+            filteredFolders.map((folder) => (
             <button
               key={folder.title}
               type="button"
@@ -178,7 +212,12 @@ export default function DocumentVault({ onFolderSelect }) {
                 <span className="text-slate-400">Updated {folder.updatedAgo}</span>
               </div>
             </button>
-          ))}
+            ))
+          ) : (
+            <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+              No matching folders found.
+            </div>
+          )}
         </div>
 
         <div className="mt-8 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-slate-500">
