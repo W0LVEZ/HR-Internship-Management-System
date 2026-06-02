@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
+import ProfileView from "../profile/ProfileView";
 
 import TeamCard from "./TeamCard";
 import MyInternsFilterModal from "./MyInternsFilterModal";
@@ -30,6 +31,7 @@ export default function MyInternsPage() {
 
   //Team Card View State
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [selectedIntern, setSelectedIntern] = useState(null);
 
   //Filters for team card view
   const [selectedTeams, setSelectedTeams] = useState([]);
@@ -115,8 +117,13 @@ export default function MyInternsPage() {
 
   //View intern profile
   const handleView = (intern) => {
-    console.log("Clicked Intern: ", intern);
-    navigate("/intern/profile", { state: { intern } });
+    setSelectedTeam(null);
+    setSelectedIntern(intern);
+  };
+
+  const handleReturn = () => {
+    setSelectedIntern(null);
+    setSelectedTeam(null);
   };
 
   //Delete Button
@@ -152,6 +159,24 @@ export default function MyInternsPage() {
   return (
     <div className="p-6">
       <div className="card-panel">
+        {selectedIntern ? (
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setSelectedIntern(null)}
+              className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Back to Intern Management
+            </button>
+
+            <ProfileView
+              user={selectedIntern}
+              mode={role}
+              onReturn={handleReturn}
+            />
+          </div>
+        ) : (
+          <>
         {/* Top Bar */}
         <div className="flex justify-between items-center mb-4">
           {/* Search Input */}
@@ -238,6 +263,8 @@ export default function MyInternsPage() {
           <div className="rounded-xl border border-dashed border-gray-200 bg-white py-10 text-center">
             <p className="text-sm text-gray-400">No interns found.</p>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
