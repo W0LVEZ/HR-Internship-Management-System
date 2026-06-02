@@ -30,6 +30,8 @@ import HrStaffLayout from "../portals/hr-staff/layouts/HrStaffLayout";
 import HRStaffDashboard from "../portals/hr-staff/pages/HrStaffDashboard";
 import RecruitmentPage from "../portals/hr-staff/pages/RecruitmentPage";
 import StaffManagementPage from "../portals/hr-staff/pages/StaffManagement";
+import StaffDepartmentPage from "../portals/hr-staff/pages/StaffDepartmentPage";
+import StaffEmployeePage from "../portals/hr-staff/pages/StaffEmployeePage";
 import DocumentVault from "../portals/hr-staff/pages/DocumentVault";
 
 //LANDING PAGE
@@ -122,7 +124,11 @@ export const AppRouter = () => {
           <Route index element={<HRStaffDashboard />} />
           <Route path="recruitment" element={<RecruitmentPage />} />
           <Route path="intern-management" element={<InternManagementPage />} />
+
           <Route path="staff-management" element={<StaffManagementPage />} />
+          <Route path="staff-management/:departmentId" element={<StaffDepartmentPage />} />
+          <Route path="staff-management/:departmentId/:employeeId" element={<StaffEmployeePage />} />
+
           <Route path="document-vault" element={<DocumentVault />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
