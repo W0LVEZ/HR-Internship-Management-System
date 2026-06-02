@@ -83,9 +83,12 @@ export default function MyInternsPage() {
   const filteredInterns = internList.filter((intern) => {
     const teamName = getTeamName(intern);
 
+    const q = (search || "").toLowerCase();
+
     const matchesSearch =
-      (intern.name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (intern.id || "").toLowerCase().includes(search.toLowerCase());
+      (intern.name || "").toLowerCase().includes(q) ||
+      (intern.id || "").toLowerCase().includes(q) ||
+      teamName.toLowerCase().includes(q);
 
     const matchesTeam =
       selectedTeams.length === 0 || selectedTeams.includes(teamName);
@@ -158,7 +161,7 @@ export default function MyInternsPage() {
           <SearchInput
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search interns..."
+            placeholder="Search interns or teams..."
           />
           {/* Right Controls */}
           <div className="flex gap-2">
