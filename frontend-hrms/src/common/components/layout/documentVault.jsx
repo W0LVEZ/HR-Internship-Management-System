@@ -1,7 +1,6 @@
 import { Search, Upload, Download, Filter, FolderOpen, TriangleAlert } from 'lucide-react';
-import { useRef } from 'react';
-import { dummyFolders } from '../../../common/utils/mockAuth.js';
-import { useAuth } from '../../../contexts/AuthContext.jsx';
+import { useMemo, useRef, useState } from 'react';
+import { dummyFolders, mockDocumentVaultRecords } from '../../../common/utils/mockAuth.js';
 
 const slugify = (value) =>
   value
@@ -9,10 +8,95 @@ const slugify = (value) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+const DOCUMENT_VAULT_STORAGE_KEY = 'hrims_document_vault_records';
+
+const getDocumentVaultRecords = () => {
+  const storedRecords = localStorage.getItem(DOCUMENT_VAULT_STORAGE_KEY);
+
+  if (!storedRecords) {
+    localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(mockDocumentVaultRecords));
+    return mockDocumentVaultRecords;
+  }
+
+  try {
+    return JSON.parse(storedRecords);
+  } catch {
+    localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(mockDocumentVaultRecords));
+    return mockDocumentVaultRecords;
+  }
+};
+
+const isExpiringSoon = (expiryDate) => {
+  const date = new Date(expiryDate);
+
+  if (Number.isNaN(date.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+
+  const daysUntilExpiry = Math.ceil((date - today) / (1000 * 60 * 60 * 24));
+
+  return daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
+};
+
+const isExpired = (expiryDate) => {
+  const date = new Date(expiryDate);
+
+  if (Number.isNaN(date.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+
+  return date < today;
+};
+
 export default function DocumentVault({ onFolderSelect }) {
-  const { currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'ADMIN';
   const uploadInputRef = useRef(null);
+  const [search, setSearch] = useState('');
+  const documentVaultRecords = getDocumentVaultRecords();
+  const folders = useMemo(
+    () =>
+      dummyFolders.map((folder) => {
+        const folderId = slugify(folder.title);
+        const records = documentVaultRecords[folderId] ?? [];
+
+        return {
+          ...folder,
+          files: records.length,
+          expiringSoon: records.filter((record) => isExpiringSoon(record.expiryDate)).length,
+          expired: records.filter((record) => isExpired(record.expiryDate)).length,
+          records,
+        };
+      }),
+    [documentVaultRecords],
+  );
+
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const filteredFolders = folders.filter((folder) => {
+    if (!normalizedSearch) return true;
+
+    const folderMatches = folder.title.toLowerCase().includes(normalizedSearch);
+
+    const recordMatches = folder.records.some((record) => {
+      const searchableText = [
+        record.name,
+        record.university,
+        record.branch,
+        record.fileName,
+        record.status,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(normalizedSearch);
+    });
+
+    return folderMatches || recordMatches;
+  });
 
   const handleUploadClick = () => {
     uploadInputRef.current?.click();
@@ -30,7 +114,7 @@ export default function DocumentVault({ onFolderSelect }) {
 
   const handleExport = () => {
     const header = ['Title', 'Files', 'Expiring Soon', 'Updated'];
-    const rows = dummyFolders.map((folder) => [
+    const rows = folders.map((folder) => [
       folder.title,
       folder.files,
       folder.expiringSoon,
@@ -60,6 +144,8 @@ export default function DocumentVault({ onFolderSelect }) {
               <input
                 type="text"
                 placeholder="Search documents"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
                 className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-0"
               />
             </div>
@@ -92,7 +178,8 @@ export default function DocumentVault({ onFolderSelect }) {
         <input ref={uploadInputRef} type="file" className="hidden" onChange={handleUploadChange} />
 
         <div className="grid gap-3 sm:grid-cols-3">
-          {dummyFolders.map((folder) => (
+          {filteredFolders.length > 0 ? (
+            filteredFolders.map((folder) => (
             <button
               key={folder.title}
               type="button"
@@ -110,16 +197,27 @@ export default function DocumentVault({ onFolderSelect }) {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
-                {isAdmin && folder.expiringSoon > 0 && (
+                {folder.expiringSoon > 0 ? (
                   <span className="inline-flex items-center gap-1 text-amber-600">
                     <TriangleAlert size={13} />
                     {folder.expiringSoon} expiring soon
                   </span>
-                )}
+                ) : null}
+                {folder.expired > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-rose-600">
+                    <TriangleAlert size={13} />
+                    {folder.expired} expired
+                  </span>
+                ) : null}
                 <span className="text-slate-400">Updated {folder.updatedAgo}</span>
               </div>
             </button>
-          ))}
+            ))
+          ) : (
+            <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+              No matching folders found.
+            </div>
+          )}
         </div>
 
         <div className="mt-8 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-slate-500">

@@ -10,7 +10,7 @@ import EvaluationSection from "./sections/EvaluationSection";
 import TasksSection from "./sections/TasksSection";
 import { useNavigate } from "react-router-dom";
 
-export default function ProfileView({ user, mode }) {
+export default function ProfileView({ user, mode, onReturn }) {
   {
     /* Temporary User Data
           Also used to deal with the structure mismatch
@@ -114,6 +114,11 @@ export default function ProfileView({ user, mode }) {
         isEditing={isEditing}
         onEditClick={handleEditToggle}
         onBackClick={() => {
+          if (onReturn) {
+            onReturn();
+            return;
+          }
+
           if (mode === "hr-admin") navigate("/hr-admin/intern-management");
           else if (mode === "hr-staff") navigate("/hr-staff/intern-management");
           else navigate("/supervisor/myinterns");
