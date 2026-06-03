@@ -6,6 +6,7 @@ import ProfileView from "../profile/ProfileView";
 import TeamCard from "./TeamCard";
 import MyInternsFilterModal from "./MyInternsFilterModal";
 import TeamInternList from "./TeamInternList";
+import AttendanceRequestTab from "./AttendanceRequestTab";
 import SearchInput from "../ui/SearchInput";
 
 import { User2, CalendarRange } from "lucide-react";
@@ -241,8 +242,10 @@ export default function MyInternsPage() {
           </div>
         )}
 
-        {/* Team Cards */}
-        {selectedTeam ? (
+        {/* Team Cards / Attendance Requests */}
+        {role === "hr-staff" && activeTab === "attendance" ? (
+          <AttendanceRequestTab />
+        ) : selectedTeam ? (
           <TeamInternList
             teamName={selectedTeam}
             members={groupedInterns[selectedTeam] || []}

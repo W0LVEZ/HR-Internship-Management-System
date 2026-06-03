@@ -734,6 +734,7 @@ export const initializeMockDatabase = () => {
   if (!localStorage.getItem(MOA_UPLOADS_DB_KEY)) {
     localStorage.setItem(MOA_UPLOADS_DB_KEY, JSON.stringify({}));
   }
+  initializeAttendanceRequests();
   console.log("✅ Mock Database Updated with Profile Data!");
 };
 
@@ -1007,6 +1008,153 @@ const readDocumentVaultStore = () => {
     localStorage.setItem(DOCUMENT_VAULT_STORAGE_KEY, JSON.stringify(defaultRecords));
     return defaultRecords;
   }
+};
+
+export const mockAttendanceRequests = [
+  {
+    id: "req-001",
+    internId: "intern_it",
+    internName: "Alex Santos",
+    department: "Information Technology",
+    supervisorId: "supervisor_it",
+    date: "2026-05-28",
+    requestType: "Missed Time In",
+    timeIn: "09:45 AM",
+    timeOut: "06:00 PM",
+    reason: "Late arrival due to traffic on North Luzon Expressway",
+    supportingDocument: null,
+    status: "Pending",
+    submittedAt: "2026-06-01T10:30:00Z",
+  },
+  {
+    id: "req-002",
+    internId: "intern_it_2",
+    internName: "Nathan Dela Cruz",
+    department: "Information Technology",
+    supervisorId: "supervisor_it",
+    date: "2026-05-27",
+    requestType: "School Activity",
+    timeIn: "08:00 AM",
+    timeOut: "-",
+    reason: "University seminar and workshop registration",
+    supportingDocument: null,
+    status: "Approved",
+    submittedAt: "2026-05-30T14:15:00Z",
+  },
+  {
+    id: "req-003",
+    internId: "intern_mktg",
+    internName: "Mika Torres",
+    department: "Marketing",
+    supervisorId: "supervisor_mktg",
+    date: "2026-05-29",
+    requestType: "Technical Issues",
+    timeIn: "-",
+    timeOut: "-",
+    reason: "System downtime prevented time logging",
+    supportingDocument: "system-report.pdf",
+    status: "Rejected",
+    submittedAt: "2026-05-31T09:00:00Z",
+  },
+  {
+    id: "req-004",
+    internId: "intern_mktg_2",
+    internName: "Chloe Mendoza",
+    department: "Marketing",
+    supervisorId: "supervisor_mktg",
+    date: "2026-05-26",
+    requestType: "Excused Absence",
+    timeIn: "-",
+    timeOut: "-",
+    reason: "Medical appointment with company approval",
+    supportingDocument: "medical-cert.pdf",
+    status: "Pending",
+    submittedAt: "2026-05-31T11:45:00Z",
+  },
+  {
+    id: "req-005",
+    internId: "intern_it_3",
+    internName: "Bianca Ramos",
+    department: "Information Technology",
+    supervisorId: "supervisor_it",
+    date: "2026-05-25",
+    requestType: "Late",
+    timeIn: "09:35 AM",
+    timeOut: "06:15 PM",
+    reason: "Delayed bus arrival from Makati",
+    supportingDocument: null,
+    status: "Approved",
+    submittedAt: "2026-05-29T15:20:00Z",
+  },
+  {
+    id: "req-006",
+    internId: "intern_hr",
+    internName: "Jared Lim",
+    department: "Human Resources",
+    supervisorId: "supervisor_hr",
+    date: "2026-05-24",
+    requestType: "Missing Time Out",
+    timeIn: "08:50 AM",
+    timeOut: "-",
+    reason: "System error during time out procedure",
+    supportingDocument: null,
+    status: "Rejected",
+    submittedAt: "2026-05-28T13:10:00Z",
+  },
+  {
+    id: "req-007",
+    internId: "intern_hr_2",
+    internName: "David Reyes",
+    department: "Human Resources",
+    supervisorId: "supervisor_hr",
+    date: "2026-05-23",
+    requestType: "School Activity",
+    timeIn: "-",
+    timeOut: "-",
+    reason: "Academic conference at partner university",
+    supportingDocument: "conf-letter.pdf",
+    status: "Pending",
+    submittedAt: "2026-05-27T16:30:00Z",
+  },
+  {
+    id: "req-008",
+    internId: "intern_mktg_3",
+    internName: "Kyla Garcia",
+    department: "Marketing",
+    supervisorId: "supervisor_mktg",
+    date: "2026-05-22",
+    requestType: "Missed Time In",
+    timeIn: "10:15 AM",
+    timeOut: "06:30 PM",
+    reason: "Overslept due to night shift the previous day",
+    supportingDocument: null,
+    status: "Approved",
+    submittedAt: "2026-05-26T12:00:00Z",
+  },
+  {
+    id: "req-009",
+    internId: "intern_it_4",
+    internName: "Ma Villanueva",
+    department: "Information Technology",
+    supervisorId: "supervisor_it",
+    date: "2026-05-21",
+    requestType: "Technical Issues",
+    timeIn: "-",
+    timeOut: "-",
+    reason: "Mobile app login malfunction for entire shift",
+    supportingDocument: "tech-report.pdf",
+    status: "Pending",
+    submittedAt: "2026-05-25T08:45:00Z",
+  },
+];
+
+const ATTENDANCE_REQUEST_STORAGE_KEY = "hrims_attendance_requests";
+
+export const initializeAttendanceRequests = () => {
+  localStorage.setItem(
+    ATTENDANCE_REQUEST_STORAGE_KEY,
+    JSON.stringify(mockAttendanceRequests)
+  );
 };
 
 export const getDocumentVaultRecords = () => readDocumentVaultStore();
