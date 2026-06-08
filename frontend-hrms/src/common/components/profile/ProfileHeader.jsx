@@ -1,4 +1,5 @@
 import { BriefcaseBusiness, Mail, PenLine, CornerDownLeft } from "lucide-react";
+import { useRef, useState } from "react";
 
 export default function ProfileHeader({
   user,
@@ -10,12 +11,64 @@ export default function ProfileHeader({
   hideAction,
 }) {
   const isIntern = mode === "INTERN";
+  const fileInputRef = useRef(null);
+  const [profileImage, setProfileImage] = useState(user.profileImage || null);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const handleProfileClick = () => {
+  fileInputRef.current?.click();
+};
+
+const handleProfileChange = (event) => {
+  const file = event.target.files?.[0];
+
+  if (!file) return;
+
+  setSelectedFile(file);
+
+  const previewUrl = URL.createObjectURL(file);
+  setProfileImage(previewUrl);
+};
+
+console.log(profileImage);
 
   return (
     <div className="flex justify-between items-center pb-5  ">
       {/* Left Side */}
       <div className="flex items-center gap-4">
-        <div className="w-20 h-20 bg-gray-400 rounded-md"></div>
+        {/* Changeable profile picture */}
+        <div
+          onClick={isEditing ? handleProfileClick : undefined}
+          className={`relative w-20 h-20 rounded-md overflow-hidden transition ${
+            isEditing 
+              ? "bg-gray-400 cursor-pointer hover:bg-gray-500 ring-2 ring-violet-400"
+              : "bg-gray-400"
+          }`}
+        >
+          {profileImage ? (
+            <img
+              src={profileImage}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-400"></div>
+          )}
+          {isEditing && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <span className="text-xs text-white text-center">
+                Change Photo
+              </span>
+            </div>
+          )}
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleProfileChange}
+        />
 
         <div>
           <h2 className="font-bold text-xl">{user.name}</h2>
