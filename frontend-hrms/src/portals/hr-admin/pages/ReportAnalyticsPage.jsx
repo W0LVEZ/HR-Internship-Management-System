@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { BarChart3, Download, TrendingUp } from 'lucide-react';
 import {
   dummyChartDays,
@@ -6,6 +7,7 @@ import {
   dummyMetrics,
   dummyUniversities,
 } from '../../../common/utils/mockAuth.js';
+import GenerateReportModal from './GenerateReportModal';
 
 const METRIC_STYLES = [
   {
@@ -39,23 +41,37 @@ const OVERVIEW_SERIES = [
 const LINE_COLORS = ['#4f46e5', '#8b5cf6', '#6ee7b7'];
 
 export default function ReportsAndAnalytics() {
+  const [showGenerateReport, setShowGenerateReport] = useState(false);
+  const location = useLocation();
   const metrics = dummyMetrics;
   const internshipOverview = dummyInternshipOverview;
   const universities = dummyUniversities;
   const chartDays = dummyChartDays;
 
   const total = useMemo(() => universities.reduce((sum, item) => sum + item.value, 0), [universities]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("action") === "generate-report") {
+      setShowGenerateReport(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location]);
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        {/**<div>
+        <div>
           <h1 className="text-xl font-semibold text-slate-900">Reports &amp; Analytics</h1>
           <p className="mt-1 text-xs text-slate-400">Performance Tracking</p>
         </div>
-        <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
+        <button
+          onClick={() => setShowGenerateReport(true)}
+          className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"
+        >
           <TrendingUp size={15} />
-          Export report
-        </button>**/}
+          Generate Report
+        </button>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -356,6 +372,9 @@ export default function ReportsAndAnalytics() {
           <div className="pt-14 text-[15px] font-semibold text-slate-900">Summary</div>
         </div>
       </section>
+      {showGenerateReport && (
+        <GenerateReportModal onClose={() => setShowGenerateReport(false)} />
+      )}
     </div>
   );
 }

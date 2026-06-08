@@ -70,6 +70,15 @@ export default function StaffManagement() {
   const [employeeForm, setEmployeeForm] = useState(EMPTY_EMPLOYEE_FORM);
   const [formError, setFormError] = useState('');
 
+  // Add Department State
+  const [isAddDeptOpen, setIsAddDeptOpen] = useState(false);
+  const [newDeptTitle, setNewDeptTitle] = useState('');
+
+  // Filter Dropdown States
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [filterType, setFilterType] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+
   const activeDepartment = useMemo(
     () => departments.find((department) => department.title === selectedDepartment) ?? null,
     [departments, selectedDepartment],
@@ -100,19 +109,43 @@ export default function StaffManagement() {
   }, [activeDepartment]);
 
   const filteredEmployees = useMemo(() => {
+    let list = employeeRows;
+
+    // Apply type filter
+    if (filterType !== 'All') {
+      list = list.filter((e) => e.type === filterType);
+    }
+
+    // Apply status filter
+    if (filterStatus !== 'All') {
+      list = list.filter((e) => e.status === filterStatus);
+    }
+
     const normalized = searchTerm.trim().toLowerCase();
 
     if (!normalized) {
-      return employeeRows;
+      return list;
     }
 
-    return employeeRows.filter((employee) =>
+    return list.filter((employee) =>
       [employee.id, employee.name, employee.type, employee.status]
         .join(' ')
         .toLowerCase()
         .includes(normalized),
     );
-  }, [employeeRows, searchTerm]);
+  }, [employeeRows, searchTerm, filterType, filterStatus]);
+
+  const filteredDepartments = useMemo(() => {
+    const normalized = searchTerm.trim().toLowerCase();
+    if (!normalized) {
+      return departments;
+    }
+    return departments.filter(
+      (dept) =>
+        dept.title.toLowerCase().includes(normalized) ||
+        dept.members.some((member) => member.name.toLowerCase().includes(normalized))
+    );
+  }, [departments, searchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -149,7 +182,6 @@ export default function StaffManagement() {
 
   const handleCloseAddEmployee = () => {
     setIsAddEmployeeOpen(false);
-    setFormError('');
   };
 
   const handleEmployeeFormChange = (event) => {
@@ -187,6 +219,31 @@ export default function StaffManagement() {
     setIsAddEmployeeOpen(false);
   };
 
+  const handleAddDepartmentSubmit = (event) => {
+    event.preventDefault();
+    if (!newDeptTitle.trim()) return;
+
+    const exists = departments.some(
+      (dept) => dept.title.toLowerCase() === newDeptTitle.trim().toLowerCase()
+    );
+    if (exists) {
+      alert("A department with this name already exists.");
+      return;
+    }
+
+    const newDept = {
+      title: newDeptTitle.trim(),
+      count: 0,
+      members: [],
+    };
+
+    const nextDepartments = [...departments, newDept];
+    setDepartments(nextDepartments);
+    localStorage.setItem("hrims_departments_db", JSON.stringify(nextDepartments));
+    setNewDeptTitle('');
+    setIsAddDeptOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       {!activeDepartment ? (
@@ -198,11 +255,17 @@ export default function StaffManagement() {
                 <input
                   type="text"
                   placeholder="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
               </div>
               <div className="flex items-center gap-3">
-                <button className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
+                <button
+                  type="button"
+                  onClick={() => setIsAddDeptOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 cursor-pointer"
+                >
                   <Plus size={16} />
                   Add New Department
                 </button>
@@ -215,7 +278,7 @@ export default function StaffManagement() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-2">
-            {departments.map((department) => (
+            {filteredDepartments.map((department) => (
               <div key={department.title} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -282,10 +345,71 @@ export default function StaffManagement() {
                   <Plus size={16} />
                   Add New Employee
                 </button>
-                <button className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                  <Filter size={16} />
-                  Filter
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                    className={`inline-flex h-11 items-center gap-2 rounded-2xl border px-5 text-sm font-semibold transition hover:bg-slate-50 cursor-pointer ${
+                      filterType !== 'All' || filterStatus !== 'All'
+                        ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50'
+                        : 'border-slate-200 bg-white text-slate-700'
+                    }`}
+                  >
+                    <Filter size={16} />
+                    Filter {(filterType !== 'All' || filterStatus !== 'All') && "•"}
+                  </button>
+                  {isFilterDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-50">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">Employee Type</label>
+                          <select
+                            value={filterType}
+                            onChange={(e) => {
+                              setFilterType(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                            className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 outline-none"
+                          >
+                            <option value="All">All Types</option>
+                            <option value="Office">Office</option>
+                            <option value="Remote">Remote</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">Status</label>
+                          <select
+                            value={filterStatus}
+                            onChange={(e) => {
+                              setFilterStatus(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                            className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 outline-none"
+                          >
+                            <option value="All">All Statuses</option>
+                            <option value="Permanent">Permanent</option>
+                            <option value="Probationary">Probationary</option>
+                            <option value="Contractual">Contractual</option>
+                          </select>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilterType('All');
+                              setFilterStatus('All');
+                              setIsFilterDropdownOpen(false);
+                              setCurrentPage(1);
+                            }}
+                            className="text-[11px] font-semibold text-slate-500 hover:text-slate-800"
+                          >
+                            Reset Filters
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -583,6 +707,51 @@ export default function StaffManagement() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {isAddDeptOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <h2 className="text-base font-semibold text-slate-900">Add New Department</h2>
+              <button
+                type="button"
+                onClick={() => setIsAddDeptOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleAddDepartmentSubmit} className="mt-4 space-y-4">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-slate-500">Department Name</span>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Engineering"
+                  value={newDeptTitle}
+                  onChange={(e) => setNewDeptTitle(e.target.value)}
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                />
+              </label>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddDeptOpen(false)}
+                  className="inline-flex h-11 min-w-24 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex h-11 min-w-28 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Add Dept
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

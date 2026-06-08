@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
   Search, SlidersHorizontal, User, FileText,
   Briefcase, X, Eye,
-  ChevronLeft, ChevronRight, Mail, ClipboardList
+  ChevronLeft, ChevronRight, Mail, ClipboardList, Plus
 } from "lucide-react";
 import MyPartnerUnivirsity from "./MyPartnerUnivirsity";
 import { addSystemLog, LOG_TYPES } from "../../utils/systemLogger";
+import AddInternModal from "./AddInternModal";
+import { getStoredUniversities, saveUniversitiesToTemporaryDatabase } from "../../utils/mockAuth";
 
 const getRecruitmentApps = () => {
   const db = JSON.parse(localStorage.getItem("hrims_users_db") || "{}");
@@ -21,33 +24,67 @@ const getRecruitmentApps = () => {
 
 export default function Myrecruitmentpage() {
   const { currentUser } = useAuth();
+  const location = useLocation();
   const isAdmin = currentUser?.role === "ADMIN";
 
   const [tab, setTab] = useState("Application");
   const [sideTab, setSideTab] = useState("Information");
   const [selId, setSelId] = useState(null);
   const [search, setSearch] = useState("");
+  const [showAddIntern, setShowAddIntern] = useState(false);
   const [f, setF] = useState({ 
     open: false, progs: [], stats: [], tProgs: [], tStats: [] 
   });
   const [apps, setApps] = useState(() => getRecruitmentApps());
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("action") === "add-intern") {
+      setShowAddIntern(true);
+      // Clean query parameters so it doesn't reopen on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location]);
+
   const progs = [...new Set(apps.map(a => a.prog))];
   const stats = ["Pending", "Approved", "Rejected", "Deploy"];
-  const unis = [...new Set(apps.map(a => a.uni))].map((name, id) => {
-    const uniInterns = apps.filter(a => a.uni === name);
-    return {
-      id,
-      name,
-      status: "Active Partner",
-      branch: "Branch/Campus",
-      contactPerson: "Name",
-      address: "Address",
-      phone: "Number",
-      email: "email@gmail.com",
-      internCount: uniInterns.length,
-    };
-  });
+  const [unis, setUnis] = useState([]);
+
+  useEffect(() => {
+    const stored = getStoredUniversities();
+    const currentUniNames = stored.map(u => u.name);
+    let updated = false;
+    const nextUnis = [...stored];
+    
+    apps.forEach(app => {
+      if (app.uni && !currentUniNames.includes(app.uni)) {
+        const newUni = {
+          id: `uni_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          name: app.uni,
+          status: "Active Partner",
+          branch: "Branch/Campus",
+          contactPerson: "Name",
+          address: "Address",
+          phone: "Number",
+          email: "email@gmail.com",
+          internCount: 0
+        };
+        nextUnis.push(newUni);
+        currentUniNames.push(app.uni);
+        updated = true;
+      }
+    });
+    
+    nextUnis.forEach(u => {
+      u.internCount = apps.filter(a => a.uni === u.name).length;
+    });
+    
+    if (updated) {
+      saveUniversitiesToTemporaryDatabase(nextUnis);
+    }
+    
+    setUnis(nextUnis);
+  }, [apps]);
   const selApp = apps.find(a => a.id === selId);
 
   const filtered = apps.filter(a => {
@@ -163,11 +200,20 @@ export default function Myrecruitmentpage() {
                             text-sm outline-none focus:border-violet-400" />
             </div>
             {tab !== "Partner University" && (
-              <button onClick={() => setF(p => ({ ...p, open: true, tProgs: p.progs, tStats: p.stats }))}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-200 
-                           rounded-md text-sm text-gray-700 hover:bg-gray-50">
-                <SlidersHorizontal size={16} /> Filter
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddIntern(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-md text-sm font-semibold transition"
+                >
+                  <Plus size={16} /> Add Intern
+                </button>
+                <button onClick={() => setF(p => ({ ...p, open: true, tProgs: p.progs, tStats: p.stats }))}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 
+                             rounded-md text-sm text-gray-700 hover:bg-gray-50">
+                  <SlidersHorizontal size={16} /> Filter
+                </button>
+              </div>
             )}
           </div>
 
@@ -226,6 +272,10 @@ export default function Myrecruitmentpage() {
             {tab === "Partner University" ? (
               <MyPartnerUnivirsity
                 universities={unis}
+                onUpdateUniversities={(updatedUnis) => {
+                  saveUniversitiesToTemporaryDatabase(updatedUnis);
+                  setUnis(updatedUnis);
+                }}
                 interns={apps}
                 search={search}
               />
@@ -414,6 +464,14 @@ export default function Myrecruitmentpage() {
         </div>
         
       </div>
+      {showAddIntern && (
+        <AddInternModal
+          onClose={() => setShowAddIntern(false)}
+          onSave={() => {
+            setApps(getRecruitmentApps());
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -303,6 +303,7 @@ export const dummyDepartments = [
 const USERS_DB_KEY = "hrims_users_db";
 const DEPARTMENTS_DB_KEY = "hrims_departments_db";
 const MOA_UPLOADS_DB_KEY = "hrims_moa_uploads_db";
+const UNIVERSITIES_DB_KEY = "hrims_universities_db";
 
 const canUseLocalStorage = () => typeof window !== "undefined" && window.localStorage;
 
@@ -336,6 +337,48 @@ export const getStoredDepartments = () => {
   } catch {
     localStorage.setItem(DEPARTMENTS_DB_KEY, JSON.stringify(dummyDepartments));
     return dummyDepartments;
+  }
+};
+
+export const getStoredUniversities = () => {
+  if (!canUseLocalStorage()) {
+    return [];
+  }
+
+  const storedUnis = localStorage.getItem(UNIVERSITIES_DB_KEY);
+  if (!storedUnis) {
+    const users = JSON.parse(localStorage.getItem(USERS_DB_KEY) || JSON.stringify(mockUsers));
+    const interns = Object.values(users).filter((u) => u.role === "INTERN");
+    const uniqueUniNames = [...new Set(interns.map((i) => i.university).filter(Boolean))];
+    const defaultUnis = uniqueUniNames.map((name, index) => {
+      const uniInterns = interns.filter((i) => i.university === name);
+      return {
+        id: `uni_${index + 1}`,
+        name,
+        status: "Active Partner",
+        branch: "Main Campus",
+        contactPerson: "Dr. Jane Smith",
+        address: "123 University Ave, Manila",
+        phone: "0917-123-4567",
+        email: `linkage@${name.toLowerCase().replace(/[^a-z0-9]/g, "")}.edu.ph`,
+        internCount: uniInterns.length,
+      };
+    });
+
+    localStorage.setItem(UNIVERSITIES_DB_KEY, JSON.stringify(defaultUnis));
+    return defaultUnis;
+  }
+
+  try {
+    return JSON.parse(storedUnis);
+  } catch {
+    return [];
+  }
+};
+
+export const saveUniversitiesToTemporaryDatabase = (unis) => {
+  if (canUseLocalStorage()) {
+    localStorage.setItem(UNIVERSITIES_DB_KEY, JSON.stringify(unis));
   }
 };
 
@@ -717,11 +760,30 @@ export const getHrAdminDashboardMetrics = () => {
 
 // It writes the data above into the browser so the app can use it.
 export const initializeMockDatabase = () => {
-  if (!localStorage.getItem(USERS_DB_KEY)) {
+  const existingUsers = localStorage.getItem(USERS_DB_KEY);
+  if (!existingUsers) {
     localStorage.setItem(USERS_DB_KEY, JSON.stringify(mockUsers));
     console.log("✅ Mock Database Initialized!");
   } else {
-    console.log("ℹ️ Mock Database already exists.");
+    try {
+      const db = JSON.parse(existingUsers);
+      let updated = false;
+      Object.keys(mockUsers).forEach((key) => {
+        if (!db[key]) {
+          db[key] = mockUsers[key];
+          updated = true;
+        }
+      });
+      if (updated) {
+        localStorage.setItem(USERS_DB_KEY, JSON.stringify(db));
+        console.log("✅ Mock Database updated with missing default users!");
+      } else {
+        console.log("ℹ️ Mock Database already exists and is complete.");
+      }
+    } catch (e) {
+      localStorage.setItem(USERS_DB_KEY, JSON.stringify(mockUsers));
+      console.log("✅ Mock Database reset due to parse failure.");
+    }
   }
 
   if (!localStorage.getItem(DEPARTMENTS_DB_KEY)) {
@@ -734,6 +796,7 @@ export const initializeMockDatabase = () => {
   if (!localStorage.getItem(MOA_UPLOADS_DB_KEY)) {
     localStorage.setItem(MOA_UPLOADS_DB_KEY, JSON.stringify({}));
   }
+  getStoredUniversities();
   initializeAttendanceRequests();
   console.log("✅ Mock Database Updated with Profile Data!");
 };

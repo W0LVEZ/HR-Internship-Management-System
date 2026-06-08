@@ -16,8 +16,14 @@ export default function LayoutTemplate({ headerConfig }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    return localStorage.getItem("hrims_sidebar_collapsed") === "true";
+  });
   const [pageHeader, setPageHeader] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem("hrims_sidebar_collapsed", isCollapsed);
+  }, [isCollapsed]);
 
   useEffect(() => {
     setPageHeader(null);
@@ -87,7 +93,7 @@ export default function LayoutTemplate({ headerConfig }) {
 
       <div
         className={`flex-1 transition-all duration-300 ${
-          isCollapsed ? "ml-24" : "ml-60"
+          isCollapsed ? "ml-20" : "ml-60"
         }`}
       >
         <div className="px-6 pt-3">

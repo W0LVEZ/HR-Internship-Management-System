@@ -32,7 +32,7 @@ import RecruitmentPage from "../portals/hr-staff/pages/RecruitmentPage";
 import StaffManagementPage from "../portals/hr-staff/pages/StaffManagement";
 import StaffDepartmentPage from "../portals/hr-staff/pages/StaffDepartmentPage";
 import StaffEmployeePage from "../portals/hr-staff/pages/StaffEmployeePage";
-import DocumentVault from "../portals/hr-staff/pages/DocumentVault";
+import StaffDocumentVault from "../portals/hr-staff/pages/StaffDocumentVault";
 
 //LANDING PAGE
 import LandingPageHeader from "../common/components/layout/LandingPageHeader";
@@ -129,7 +129,8 @@ export const AppRouter = () => {
           <Route path="staff-management/:departmentId" element={<StaffDepartmentPage />} />
           <Route path="staff-management/:departmentId/:employeeId" element={<StaffEmployeePage />} />
 
-          <Route path="document-vault" element={<DocumentVault />} />
+          <Route path="document-vault" element={<StaffDocumentVault />} />
+          <Route path="document-vault/:folderId" element={<StaffDocumentVault />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 

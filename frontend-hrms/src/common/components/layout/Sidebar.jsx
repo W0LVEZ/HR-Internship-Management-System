@@ -1,5 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import SidebarProfile from "./SidebarProfile";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const activeClass =
   "bg-gray-200 border-l-4 border-[#7C3EFF] font-medium text-[#7C3EFF] bg-gray-300/70";
@@ -9,36 +10,40 @@ const Sidebar = ({
   links = [],
   userName,
   role,
-  isCollapsed,
+  isCollapsed = false,
   setIsCollapsed,
 }) => {
-  const baseClass = `w-full p-3 mt-1 rounded-r-lg transition-colors duration-300 flex items-center gap-3 ${
-    isCollapsed ? "justify-center" : "gap-3"
+  const location = useLocation();
+  const baseClass = `w-full mt-1 rounded-r-lg transition-all duration-300 flex items-center ${
+    isCollapsed ? "justify-center p-2" : "gap-3 p-3"
   }`;
-
-  const getNavClass = ({ isActive }) =>
-    `${baseClass} ${isActive ? activeClass : inactiveClass}`;
 
   return (
     <nav
-      className={`fixed top-0 left-0 h-screen bg-white overflow-y-auto rounded-2xl text-gray-700 shadow-lg flex flex-col justify-between transition-all duration-300
-    ${isCollapsed ? "w-24 p-4" : "w-60 p-7"}`}
+      className={`fixed top-0 left-0 h-screen bg-white overflow-y-auto rounded-2xl text-gray-700 shadow-lg flex flex-col justify-between transition-all duration-300 z-40
+    ${isCollapsed ? "w-20 p-3" : "w-60 p-6"}`}
     >
       <div>
-        {/* LOGO */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`flex items-center text-4xl font-medium mb-6 w-full ${
-            isCollapsed ? "justify-center" : ""
-          }`}
-        >
-          <img
-            src="/image.png"
-            alt="logo"
-            className="w-12 h-12 rounded-full bg-violet-500"
-          />
-          {!isCollapsed && <h1 className="ml-2">HRIMS</h1>}
-        </button>
+        {/* LOGO & TOGGLE BUTTON */}
+        <div className={`flex items-center justify-between mb-6 ${isCollapsed ? "flex-col gap-3" : ""}`}>
+          <div className="flex items-center">
+            <img
+              src="/image.png"
+              alt="logo"
+              className="w-10 h-10 rounded-full bg-violet-500 shrink-0"
+            />
+            {!isCollapsed && <h1 className="ml-2.5 text-xl font-bold text-gray-900 tracking-wide">HRIMS</h1>}
+          </div>
+          
+          <button
+            type="button"
+            onClick={() => setIsCollapsed?.(!isCollapsed)}
+            className="p-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-violet-600 transition shadow-sm cursor-pointer"
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
 
         {/* NAVIGATION */}
         <ul>
@@ -51,7 +56,13 @@ const Sidebar = ({
                     <NavLink
                       to={link.to}
                       end={link.end}
-                      className={getNavClass}
+                      className={() => {
+                        const isDashboard = link.end || link.to === "/hr-admin" || link.to === "/hr-staff" || link.to === "/supervisor" || link.to === "/intern" || link.to === "/applicant";
+                        const isActive = isDashboard
+                          ? location.pathname === link.to
+                          : location.pathname.startsWith(link.to);
+                        return `${baseClass} ${isActive ? activeClass : inactiveClass}`;
+                      }}
                     >
                       {Icon && <Icon size={18} />}
                       {!isCollapsed && (
