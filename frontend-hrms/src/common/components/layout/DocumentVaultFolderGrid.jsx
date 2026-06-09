@@ -52,9 +52,11 @@ const isExpired = (expiryDate) => {
   return date < today;
 };
 
-export default function DocumentVault({ onFolderSelect }) {
+export default function DocumentVaultFolderGrid({ onFolderSelect }) {
   const uploadInputRef = useRef(null);
   const [search, setSearch] = useState('');
+  const [filterOption, setFilterOption] = useState('All'); // 'All', 'Expiring', 'Expired'
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const documentVaultRecords = getDocumentVaultRecords();
   const folders = useMemo(
     () =>
@@ -76,6 +78,10 @@ export default function DocumentVault({ onFolderSelect }) {
   const normalizedSearch = search.trim().toLowerCase();
 
   const filteredFolders = folders.filter((folder) => {
+    // Apply status filter
+    if (filterOption === 'Expiring' && folder.expiringSoon === 0) return false;
+    if (filterOption === 'Expired' && folder.expired === 0) return false;
+
     if (!normalizedSearch) return true;
 
     const folderMatches = folder.title.toLowerCase().includes(normalizedSearch);
@@ -168,10 +174,50 @@ export default function DocumentVault({ onFolderSelect }) {
               <Download size={16} />
               Export
             </button>
-            <button className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-              <Filter size={16} />
-              Filter
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium transition hover:bg-slate-50 cursor-pointer ${
+                  filterOption !== 'All'
+                    ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50'
+                    : 'border-slate-200 bg-white text-slate-700'
+                }`}
+              >
+                <Filter size={16} />
+                Filter {filterOption !== 'All' && "•"}
+              </button>
+              {showFilterDropdown && (
+                <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-slate-200 bg-white shadow-lg z-50">
+                  <div className="p-3 border-b border-slate-100">
+                    <p className="text-xs font-semibold text-slate-600 uppercase">Folder Status</p>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    {[
+                      { value: 'All', label: 'All Folders' },
+                      { value: 'Expiring', label: 'Has Expiring Soon' },
+                      { value: 'Expired', label: 'Has Expired' },
+                    ].map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded animate-fade-in">
+                        <input
+                          type="radio"
+                          name="folderFilter"
+                          checked={filterOption === opt.value}
+                          onChange={() => {
+                            setFilterOption(opt.value);
+                            setShowFilterDropdown(false);
+                          }}
+                          className="h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm font-medium text-slate-700">
+                          {opt.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

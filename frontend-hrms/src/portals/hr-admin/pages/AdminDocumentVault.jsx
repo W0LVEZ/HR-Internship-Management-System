@@ -1,7 +1,7 @@
 import { ArrowLeft, Download, Eye, FileDown, Filter, Search, TriangleAlert, Upload } from "lucide-react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useRef, useState } from "react";
-import DocumentVault from "../../../common/components/layout/documentVault.jsx";
+import DocumentVaultFolderGrid from "../../../common/components/layout/DocumentVaultFolderGrid.jsx";
 import { dummyFolders, mockDocumentVaultRecords } from "../../../common/utils/mockAuth.js";
 import DocumentsViewModal from "../components/ui/DocumentsViewModal.jsx";
 
@@ -113,7 +113,7 @@ const getExpiryTone = (expiryDate) => {
 function AdminDocumentVaultOverview() {
   const navigate = useNavigate();
 
-  return <DocumentVault onFolderSelect={(folder) => navigate(`/hr-admin/document-vault/${slugify(folder.title)}`)} />;
+  return <DocumentVaultFolderGrid onFolderSelect={(folder) => navigate(`/hr-admin/document-vault/${slugify(folder.title)}`)} />;
 }
 
 function AdminDocumentVaultDetail() {

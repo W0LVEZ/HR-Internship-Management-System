@@ -69,8 +69,8 @@ export default function SidebarProfile({
       )}
 
       <div
-        className={`flex items-center w-full p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors shadow-sm ${
-          isCollapsed ? "justify-center" : "justify-between"
+        className={`flex items-center w-full rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-all duration-300 shadow-sm ${
+          isCollapsed ? "justify-center p-1.5" : "justify-between p-3"
         }`}
       >
         <div

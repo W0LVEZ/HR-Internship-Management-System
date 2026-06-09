@@ -35,6 +35,8 @@ export default function SearchFilterBar({
   placeholder = "Search",
   showFilter = false,
   action,
+  filterDropdown,
+  onFilterClick,
 }) {
   return (
     <div className="mb-7 flex items-center justify-between gap-4">
@@ -52,14 +54,21 @@ export default function SearchFilterBar({
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 relative">
         {action}
 
         {showFilter && (
-          <button className="flex h-11 items-center gap-2 rounded-lg border border-neutral-100 bg-white px-5 text-[12px] font-medium text-neutral-800 transition hover:bg-neutral-50">
-            <FilterIcon />
-            Filter
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={onFilterClick}
+              className="flex h-11 items-center gap-2 rounded-lg border border-neutral-100 bg-white px-5 text-[12px] font-medium text-neutral-800 transition hover:bg-neutral-50 cursor-pointer"
+            >
+              <FilterIcon />
+              Filter
+            </button>
+            {filterDropdown}
+          </div>
         )}
       </div>
     </div>

@@ -16,12 +16,21 @@ export default function LoginForm({ onForgotPassword }) {
     e.preventDefault(); // Prevent the page from refreshing
 
     const loginEmail = email.toLowerCase().trim();
-    //new added
-    const db = JSON.parse(localStorage.getItem("hrims_users_db") || "{}");
+    let db = {};
+    try {
+      db = JSON.parse(localStorage.getItem("hrims_users_db") || "{}");
+    } catch (err) {
+      console.error("Failed to parse hrims_users_db", err);
+    }
 
     const matchedUser = Object.values(db).find(
-      (user) => user.email.toLowerCase() === loginEmail,
+      (user) => user.email && user.email.toLowerCase() === loginEmail,
     );
+
+    if (!matchedUser) {
+      alert("User not found! Please check your email or clear your browser's local storage.");
+      return;
+    }
 
     const user = login(matchedUser.id);
 

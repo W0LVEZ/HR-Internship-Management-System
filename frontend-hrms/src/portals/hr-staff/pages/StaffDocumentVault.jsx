@@ -1,17 +1,11 @@
-﻿import { Download, Eye, Filter, Search } from "lucide-react";
-import { Navigate } from "react-router-dom";
-import { useState } from "react";
+import { Download, Eye, Filter, Search, ArrowLeft } from "lucide-react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useState, useMemo } from "react";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
-import { mockDocumentVaultRecords } from "../../../common/utils/mockAuth.js";
+import { mockDocumentVaultRecords, dummyFolders } from "../../../common/utils/mockAuth.js";
 import { addSystemLog } from "../../../common/utils/systemLogger.js";
+import DocumentVaultFolderGrid from "../../../common/components/layout/DocumentVaultFolderGrid.jsx";
 import DocumentsViewModal from "../../hr-admin/components/ui/DocumentsViewModal.jsx";
-
-const vaultTabs = [
-  { label: "MOA", key: "moa" },
-  { label: "NDA", key: "nda" },
-  { label: "COA", key: "coa" },
-  { label: "Endorsement", key: "endorsement-letter" },
-];
 
 const DOCUMENT_VAULT_STORAGE_KEY = "hrims_document_vault_records";
 
@@ -44,6 +38,12 @@ const updateDocumentVaultRecord = (folderId, recordId, updater) => {
   return nextRecords;
 };
 
+const slugify = (value) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 const statusStyles = {
   Approved: "bg-emerald-100 text-emerald-600",
   Pending: "bg-amber-100 text-amber-600",
@@ -71,21 +71,29 @@ const normalizeStatus = (status) => {
   return status;
 };
 
-export default function DocumentVault() {
+function StaffDocumentVaultOverview() {
+  const navigate = useNavigate();
+
+  return (
+    <DocumentVaultFolderGrid
+      onFolderSelect={(folder) => navigate(`/hr-staff/document-vault/${slugify(folder.title)}`)}
+    />
+  );
+}
+
+function StaffDocumentVaultDetail() {
+  const navigate = useNavigate();
+  const { folderId } = useParams();
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState("moa");
   const [recordsByTab, setRecordsByTab] = useState(getDocumentVaultRecords());
   const [openPreview, setOpenPreview] = useState(false);
   const [previewDocument, setPreviewDocument] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
-  const [selectedTab, setSelectedTab] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState(["Approved", "Pending", "Rejected"]);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
-  if (currentUser?.role && currentUser.role !== "HR_STAFF" && currentUser.role !== "ADMIN") {
-    return <Navigate to="/hr-staff" replace />;
-  }
+  const folder = dummyFolders.find((item) => slugify(item.title) === folderId);
 
   const toggleStatusFilter = (status) => {
     setSelectedStatuses((prev) =>
@@ -93,33 +101,35 @@ export default function DocumentVault() {
     );
   };
 
-  const rows = recordsByTab[activeTab] ?? [];
+  const rows = recordsByTab[folderId] ?? [];
 
-  const filteredRows = rows.filter((row) => {
-    const normalizedStatus = normalizeStatus(row.status);
-    const matchesStatus = selectedStatuses.includes(normalizedStatus);
-    const matchesSearch =
-      searchTerm === "" ||
-      row.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      row.fileName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      row.university?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      row.branch?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const filteredRows = useMemo(() => {
+    return rows.filter((row) => {
+      const normalizedStatus = normalizeStatus(row.status);
+      const matchesStatus = selectedStatuses.includes(normalizedStatus);
+      const matchesSearch =
+        searchTerm === "" ||
+        row.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.fileName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.university?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.branch?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesStatus && matchesSearch;
+    });
+  }, [rows, selectedStatuses, searchTerm]);
 
   const updateSelectedRow = (nextStatus, remarks) => {
-    if (!selectedTab || !selectedRecord) return;
+    if (!folderId || !selectedRecord) return;
 
     setRecordsByTab((previousRecords) => {
       const normalizedStatus = normalizeStatus(nextStatus);
       const nextRecords = {
         ...previousRecords,
-        [selectedTab]: (previousRecords[selectedTab] ?? []).map((row) =>
+        [folderId]: (previousRecords[folderId] ?? []).map((row) =>
           row.id === selectedRecord.id ? { ...row, status: normalizedStatus, remarks } : row,
         ),
       };
 
-      updateDocumentVaultRecord(selectedTab, selectedRecord.id, (row) => ({
+      updateDocumentVaultRecord(folderId, selectedRecord.id, (row) => ({
         ...row,
         status: normalizedStatus,
         remarks,
@@ -131,7 +141,6 @@ export default function DocumentVault() {
 
   const handleViewDocument = (row) => {
     setSelectedRecord(row);
-    setSelectedTab(activeTab);
     setPreviewDocument({
       internName: row.name,
       universityBranch: `${row.university} / ${row.branch}`,
@@ -200,9 +209,24 @@ export default function DocumentVault() {
     });
   };
 
+  if (!folder) {
+    return <Navigate to="/hr-staff/document-vault" replace />;
+  }
+
   return (
     <div className="space-y-5">
-      <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-5">
+      <div className="mt-6 mb-4">
+        <button
+          type="button"
+          onClick={() => navigate("/hr-staff/document-vault")}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800 cursor-pointer"
+          aria-label="Back to folder list"
+        >
+          <ArrowLeft size={18} />
+        </button>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-5">
         <div className="flex flex-col gap-4 border-b border-slate-100 pb-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full max-w-[240px]">
@@ -220,7 +244,7 @@ export default function DocumentVault() {
               <button
                 type="button"
                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer"
               >
                 <Filter size={16} />
                 Filter
@@ -265,22 +289,6 @@ export default function DocumentVault() {
               )}
             </div>
           </div>
-
-          <div className="flex flex-wrap gap-6 border-b border-slate-200 text-sm">
-            {vaultTabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`relative pb-3 font-medium transition ${
-                  activeTab === tab.key ? "text-violet-600" : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {tab.label}
-                {activeTab === tab.key && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-violet-600" />}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
@@ -318,7 +326,7 @@ export default function DocumentVault() {
                       <button
                         type="button"
                         onClick={() => handleViewDocument(row)}
-                        className="transition hover:text-violet-500"
+                        className="transition hover:text-violet-500 cursor-pointer"
                         aria-label="View document"
                       >
                         <Eye size={16} />
@@ -326,7 +334,7 @@ export default function DocumentVault() {
                       <button
                         type="button"
                         onClick={() => handleDownloadDocument(row)}
-                        className="transition hover:text-violet-500"
+                        className="transition hover:text-violet-500 cursor-pointer"
                         aria-label="Download document"
                       >
                         <Download size={16} />
@@ -358,4 +366,19 @@ export default function DocumentVault() {
       />
     </div>
   );
+}
+
+export default function StaffDocumentVault() {
+  const { currentUser } = useAuth();
+  const { folderId } = useParams();
+
+  if (currentUser?.role && currentUser.role !== "HR_STAFF" && currentUser.role !== "ADMIN") {
+    return <Navigate to="/hr-staff" replace />;
+  }
+
+  if (folderId) {
+    return <StaffDocumentVaultDetail />;
+  }
+
+  return <StaffDocumentVaultOverview />;
 }

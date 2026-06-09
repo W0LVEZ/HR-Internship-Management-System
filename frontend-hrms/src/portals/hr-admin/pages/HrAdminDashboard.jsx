@@ -1,5 +1,6 @@
 import { Bell, BriefcaseBusiness, CheckCheck, ChevronDown, ClipboardList, Plus, SunMedium, Users, University } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   getHrAdminDashboardMetrics,
   getHrAdminRecentActivities,
@@ -14,10 +15,44 @@ const metricIcons = {
   'Partner Universities': University,
 };
 
+const ATTENDANCE_DATA = {
+  'Today': [
+    { day: 'Mon', levels: [58, 88, 98] },
+    { day: 'Tue', levels: [58, 78, 98] },
+    { day: 'Web', levels: [45, 74, 98] },
+    { day: 'Thu', levels: [58, 88, 98] },
+    { day: 'Fri', levels: [75, 82, 98] },
+    { day: 'Sat', levels: [42, 75, 98] },
+    { day: 'Sun', levels: [42, 85, 98] },
+  ],
+  'Past Week': [
+    { day: 'Week 1', levels: [65, 80, 95] },
+    { day: 'Week 2', levels: [70, 85, 90] },
+    { day: 'Week 3', levels: [55, 75, 88] },
+    { day: 'Week 4', levels: [80, 90, 99] },
+  ],
+  'Past Month': [
+    { day: 'Jan', levels: [50, 70, 90] },
+    { day: 'Feb', levels: [60, 80, 95] },
+    { day: 'Mar', levels: [65, 82, 97] },
+    { day: 'Apr', levels: [70, 88, 99] },
+    { day: 'May', levels: [75, 85, 96] },
+  ],
+  'Yearly': [
+    { day: '2023', levels: [55, 75, 92] },
+    { day: '2024', levels: [60, 80, 95] },
+    { day: '2025', levels: [68, 84, 97] },
+    { day: '2026', levels: [72, 88, 99] },
+  ]
+};
+
 export default function HRAdminDashboard() {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [selectedAction, setSelectedAction] = useState('');
   const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
+  const [attendanceFilter, setAttendanceFilter] = useState('Today');
+  const [isAttendanceDropdownOpen, setIsAttendanceDropdownOpen] = useState(false);
   const [metrics, setMetrics] = useState(() => getHrAdminDashboardMetrics());
   const [recentActivity, setRecentActivity] = useState(() =>
     getHrAdminRecentActivities(),
@@ -37,6 +72,11 @@ export default function HRAdminDashboard() {
   const handleQuickActionClick = (actionId) => {
     setSelectedAction(actionId);
     setIsQuickActionOpen(false);
+    if (actionId === 'add_intern') {
+      navigate('/hr-admin/recruitment?action=add-intern');
+    } else if (actionId === 'generate_report') {
+      navigate('/hr-admin/reports-and-analytics?action=generate-report');
+    }
   };
 
   useEffect(() => {
@@ -154,12 +194,41 @@ export default function HRAdminDashboard() {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-4">
-            <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="mb-4 flex items-center justify-between gap-3 relative">
               <h2 className="text-xl font-semibold text-slate-900">Attendance Overview</h2>
-              <button className="inline-flex h-8 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600">
-                {dashboard.attendanceOverview.filterLabel}
-                <ChevronDown size={14} />
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsAttendanceDropdownOpen((prev) => !prev)}
+                  className="inline-flex h-8 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:bg-slate-50 cursor-pointer"
+                >
+                  <span>{attendanceFilter}</span>
+                  <ChevronDown size={14} className={`transition ${isAttendanceDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isAttendanceDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setIsAttendanceDropdownOpen(false)} />
+                    <div className="absolute right-0 top-[calc(100%+4px)] z-20 w-32 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                      {['Today', 'Past Week', 'Past Month', 'Yearly'].map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => {
+                            setAttendanceFilter(option);
+                            setIsAttendanceDropdownOpen(false);
+                          }}
+                          className={`flex w-full items-center rounded-lg px-2.5 py-1.5 text-left text-xs transition hover:bg-slate-50 cursor-pointer ${
+                            attendanceFilter === option ? 'text-indigo-600 font-semibold bg-indigo-50/50' : 'text-slate-600'
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-[30px_minmax(0,1fr)] gap-3">
@@ -180,7 +249,7 @@ export default function HRAdminDashboard() {
                 </div>
 
                 <div className="relative flex h-[250px] items-end justify-between gap-5">
-                  {dashboard.attendanceOverview.days.map((item) => (
+                  {(ATTENDANCE_DATA[attendanceFilter] || ATTENDANCE_DATA['Today']).map((item) => (
                     <div key={item.day} className="flex flex-1 flex-col items-center gap-2">
                       <div className="flex h-[220px] w-3 items-end">
                         <div className="flex h-full w-full flex-col justify-end gap-1">
