@@ -458,6 +458,7 @@ export const hrAdminDashboardData = {
   },
   quickActions: [
     { id: 'add_intern', label: 'Add Intern' },
+    { id: 'add_user', label: 'Add User' },
     { id: 'generate_report', label: 'Generate Report' },
   ],
   metrics: [

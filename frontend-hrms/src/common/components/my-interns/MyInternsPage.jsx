@@ -7,7 +7,7 @@ import MyInternsFilterModal from "./MyInternsFilterModal";
 import TeamInternList from "./TeamInternList";
 import SearchInput from "../ui/SearchInput";
 
-import { User2, CalendarRange } from "lucide-react";
+import { User2, CalendarRange, Plus, X, Users as UsersIcon, Briefcase, FileText, Hash } from "lucide-react";
 
 export default function MyInternsPage() {
   const navigate = useNavigate();
@@ -35,6 +35,14 @@ export default function MyInternsPage() {
   const [selectedTeams, setSelectedTeams] = useState([]);
   const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [selectedCourses, setSelectedCourses] = useState([]);
+  const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
+  const [teamFormData, setTeamFormData] = useState({
+    teamName: '',
+    department: 'Information Technology',
+    teamLeader: '',
+    teamDescription: '',
+    maxMembers: '',
+  });
 
   // Load interns from mock DB
   useEffect(() => {
@@ -149,9 +157,170 @@ export default function MyInternsPage() {
     );
   };
 
+  const handleTeamFormChange = (e) => {
+    const { name, value } = e.target;
+    setTeamFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const closeCreateTeamModal = () => {
+    setIsCreateTeamModalOpen(false);
+    setTeamFormData({
+      teamName: '',
+      department: 'Information Technology',
+      teamLeader: '',
+      teamDescription: '',
+      maxMembers: '',
+    });
+  };
+
+  const handleCreateTeam = (e) => {
+    e.preventDefault();
+    closeCreateTeamModal();
+  };
+
   return (
     <div className="p-6">
       <div className="card-panel">
+        {/* Create Team Modal */}
+        {isCreateTeamModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
+            onClick={closeCreateTeamModal}
+          >
+            <div
+              className="w-full max-w-2xl rounded-[28px] border border-violet-100 bg-white p-5 shadow-2xl shadow-violet-100/70 transition-all duration-300 sm:p-7"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 mb-6">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-500">New Team</p>
+                  <h3 className="mt-1 text-2xl font-semibold text-slate-900">Create Team</h3>
+                  <p className="mt-2 text-sm text-slate-500">Set up a new team for organizing interns.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeCreateTeamModal}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form className="space-y-5" onSubmit={handleCreateTeam}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Team Name */}
+                  <div className="md:col-span-2">
+                    <label htmlFor="teamName" className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <UsersIcon size={16} className="text-violet-500" />
+                      Team Name
+                    </label>
+                    <input
+                      id="teamName"
+                      name="teamName"
+                      value={teamFormData.teamName}
+                      onChange={handleTeamFormChange}
+                      placeholder="Enter team name"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100"
+                      required
+                    />
+                  </div>
+
+                  {/* Department */}
+                  <div>
+                    <label htmlFor="department" className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <Briefcase size={16} className="text-violet-500" />
+                      Department
+                    </label>
+                    <select
+                      id="department"
+                      name="department"
+                      value={teamFormData.department}
+                      onChange={handleTeamFormChange}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100"
+                    >
+                      <option>Information Technology</option>
+                      <option>Marketing</option>
+                      <option>Human Resources</option>
+                      <option>Finance</option>
+                      <option>Operations</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+
+                  {/* Team Leader */}
+                  <div>
+                    <label htmlFor="teamLeader" className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <UsersIcon size={16} className="text-violet-500" />
+                      Team Leader
+                    </label>
+                    <input
+                      id="teamLeader"
+                      name="teamLeader"
+                      value={teamFormData.teamLeader}
+                      onChange={handleTeamFormChange}
+                      placeholder="Enter team leader name"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100"
+                      required
+                    />
+                  </div>
+
+                  {/* Maximum Members */}
+                  <div>
+                    <label htmlFor="maxMembers" className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <Hash size={16} className="text-violet-500" />
+                      Maximum Members
+                    </label>
+                    <input
+                      id="maxMembers"
+                      name="maxMembers"
+                      type="number"
+                      min="1"
+                      value={teamFormData.maxMembers}
+                      onChange={handleTeamFormChange}
+                      placeholder="Enter max members"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100"
+                      required
+                    />
+                  </div>
+
+                  {/* Team Description */}
+                  <div className="md:col-span-2">
+                    <label htmlFor="teamDescription" className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <FileText size={16} className="text-violet-500" />
+                      Team Description
+                    </label>
+                    <textarea
+                      id="teamDescription"
+                      name="teamDescription"
+                      value={teamFormData.teamDescription}
+                      onChange={handleTeamFormChange}
+                      placeholder="Enter team description"
+                      rows="4"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100 resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeCreateTeamModal}
+                    className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center rounded-2xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700"
+                  >
+                    Create Team
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Top Bar */}
         <div className="flex justify-between items-center mb-4">
           {/* Search Input */}
@@ -167,6 +336,14 @@ export default function MyInternsPage() {
                 Export
               </button>
             )}
+            {/* Create Team Button */}
+            <button
+              onClick={() => setIsCreateTeamModalOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 shadow-sm"
+            >
+              <Plus size={16} />
+              Create Team
+            </button>
             {/* Filter Button */}
             <MyInternsFilterModal
               teams={teams}
